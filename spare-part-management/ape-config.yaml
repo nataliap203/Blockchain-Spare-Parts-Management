@@ -3,3 +3,11 @@ name: spare-part-management
 solidity:
   version: "0.8.20"
   source: ./contracts
+
+plugins:
+  - name: solidity
+  - name: alchemy
+
+
+solidity:
+  version: "0.8.20"

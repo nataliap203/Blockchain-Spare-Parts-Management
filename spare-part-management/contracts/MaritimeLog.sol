@@ -7,7 +7,7 @@ contract MaritimeLog {
     bytes32 public constant ROLE_SERVICE = keccak256("SERVICE");
 
     // Role -> (Wallet address -> bool)
-    mapping(bytes32 => mapping(address => bool)) private roles;
+    mapping(bytes32 => mapping(address => bool)) public roles;
 
 
     // Data Structures
@@ -66,7 +66,17 @@ contract MaritimeLog {
         _;
     }
 
-    function grantRole(bytes32 _role, address _account) public onlyRole(ROLE_OPERATOR) {
+    modifier validRole(bytes32 _role) {
+        require(
+            _role == ROLE_OPERATOR ||
+            _role == ROLE_SERVICE ||
+            _role == ROLE_OEM,
+            "Invalid role."
+        );
+        _;
+    }
+
+    function grantRole(bytes32 _role, address _account) public onlyRole(ROLE_OPERATOR) validRole(_role) {
         roles[_role][_account] = true;
         emit RoleGranted(_role, _account);
     }
@@ -86,7 +96,7 @@ contract MaritimeLog {
     ) public onlyRole(ROLE_OEM) returns (bytes32) {
         // part ID is hash of manufacturer address + serial number
         bytes32 newPartId = keccak256(abi.encodePacked(msg.sender, _serialNumber));
-        require(!parts[newPartId].exists, "Part already registered.");
+        require(!parts[newPartId].exists, "Part with this serial number already registered by this OEM.");
 
         parts[newPartId] = Part({
             partName: _partName,
@@ -111,7 +121,7 @@ contract MaritimeLog {
         bool isService = roles[ROLE_SERVICE][msg.sender];
         bool isOperator = roles[ROLE_OPERATOR][msg.sender];
         require(isService || isOperator, "Access denied: no permission to log service event.");
-        require(parts[_partId].exists, "Part not registered.");
+        require(parts[_partId].exists, "Part does not exist.");
 
         partHistory[_partId].push(ServiceEvent({
             serviceProvider: msg.sender,
