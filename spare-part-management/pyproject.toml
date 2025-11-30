@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "spare-part-management"
 version = "0.1.0"
@@ -5,5 +9,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "anvil>=0.0.2",
+    "ape-alchemy>=0.8.10",
+    "ape-foundry>=0.8.10",
+    "ape-solidity>=0.8.5",
     "eth-ape>=0.8.41",
+    "setuptools>=80.9.0",
 ]
