@@ -14,9 +14,13 @@ def main():
 
     # Grant roles
     manager.grant_role(operator, "OEM", oem_wartsila.address)
+    print("Granted OEM role to Wärtsilä: ", oem_wartsila.address)
     manager.grant_role(operator, "OEM", oem_abb.address)
+    print("Granted OEM role to ABB: ", oem_abb.address)
     manager.grant_role(operator, "SERVICE", service_szczecin.address)
+    print("Granted SERVICE role to Service Co. Szczecin: ", service_szczecin.address)
     manager.grant_role(operator, "SERVICE", service_gdansk.address)
+    print("Granted SERVICE role to Service Co. Gdansk: ", service_gdansk.address)
     print("Roles granted.")
 
     parts_db = []
@@ -34,6 +38,7 @@ def main():
         certificate_hash=certificate_hash_A
     )
     part_id_A = manager.contract.getPartId(oem_wartsila.address, "WRT123456")
+    print("Registered part A with ID: ", part_id_A.hex())
     parts_db.append(part_id_A)
 
     # Part B
@@ -47,6 +52,7 @@ def main():
         certificate_hash=certificate_hash_B
     )
     part_id_B = manager.contract.getPartId(oem_abb.address, "ABB654321")
+    print("Registered part B with ID: ", part_id_B.hex())
     parts_db.append(part_id_B)
     print("Logging service events...")
 

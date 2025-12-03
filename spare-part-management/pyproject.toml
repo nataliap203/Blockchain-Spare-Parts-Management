@@ -14,5 +14,9 @@ dependencies = [
     "ape-foundry>=0.8.10",
     "ape-solidity>=0.8.5",
     "eth-ape>=0.8.41",
+    "fastapi>=0.123.0",
+    "requests>=2.32.5",
     "setuptools>=80.9.0",
+    "streamlit>=1.51.0",
+    "uvicorn>=0.38.0",
 ]

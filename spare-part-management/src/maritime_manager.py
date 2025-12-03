@@ -9,6 +9,21 @@ class MaritimeManager:
     def __init__(self):
         self.contract = None
 
+        if not networks.active_provider:
+            print("Trying to connect to default local network...")
+            try:
+                self.provider_context = networks.parse_network_choice("ethereum:local:foundry")
+                self.provider_context.__enter__()
+                print(f"Connected to network: {networks.active_provider.network.name}")
+            except Exception as e:
+                print(f"Failed to connect to local network: {str(e)}")
+                try:
+                    self.provider_context = networks.parse_network_choice("ethereum:local:test")
+                    self.provider_context.__enter__()
+                except Exception as e2:
+                    raise ConnectionError(f"FATAL: Failed to connect to any local network: {str(e2)}")
+
+
         if not os.path.exists(CONFIG_FILE):
             raise FileNotFoundError(f"Configuration file {CONFIG_FILE} not found. Please deploy the contract first.")
 
@@ -28,7 +43,15 @@ class MaritimeManager:
     def get_account(self, identifier):
         if isinstance(identifier, int):
             return accounts.test_accounts[identifier]
-        return accounts.load(identifier)
+        if isinstance(identifier, str):
+            if identifier.startswith("0x"):
+                for acc in accounts.test_accounts:
+                    if acc.address == identifier:
+                        return acc
+                raise ValueError(f"Account with address {identifier} not found in test accounts.")
+            else:
+                return accounts.load(identifier)
+        raise TypeError("Identifier must be an integer index or a string address/name.")
 
     def _format_date(self, timestamp):
         """Format a timestamp into a human-readable date string.
@@ -112,9 +135,9 @@ class MaritimeManager:
         for event in raw_history:
             formatted_history.append({
                 "service_provider": event.serviceProvider,
-                "service_date": self._format_date(event.serviceDate),
+                "service_date": self._format_date(event.eventTimestamp),
                 "service_type": event.serviceType,
-                "service_protocol_hash": event.serviceProtocolHash
+                "service_protocol_hash": event.protocolHash
             })
 
         return formatted_history[::-1] # Return in reverse chronological order
