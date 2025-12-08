@@ -13,14 +13,14 @@ def main():
     service_gdansk = manager.get_account(4)
 
     # Grant roles
-    manager.grant_role(operator, "OEM", oem_wartsila.address)
-    print("Granted OEM role to Wärtsilä: ", oem_wartsila.address)
-    manager.grant_role(operator, "OEM", oem_abb.address)
-    print("Granted OEM role to ABB: ", oem_abb.address)
-    manager.grant_role(operator, "SERVICE", service_szczecin.address)
-    print("Granted SERVICE role to Service Co. Szczecin: ", service_szczecin.address)
-    manager.grant_role(operator, "SERVICE", service_gdansk.address)
-    print("Granted SERVICE role to Service Co. Gdansk: ", service_gdansk.address)
+    manager.grant_role(operator, "OEM", oem_wartsila)
+    print("Granted OEM role to Wärtsilä: ", oem_wartsila)
+    manager.grant_role(operator, "OEM", oem_abb)
+    print("Granted OEM role to ABB: ", oem_abb)
+    manager.grant_role(operator, "SERVICE", service_szczecin)
+    print("Granted SERVICE role to Service Co. Szczecin: ", service_szczecin)
+    manager.grant_role(operator, "SERVICE", service_gdansk)
+    print("Granted SERVICE role to Service Co. Gdansk: ", service_gdansk)
     print("Roles granted.")
 
     parts_db = []
@@ -37,7 +37,7 @@ def main():
         vessel_id="Vessel A",
         certificate_hash=certificate_hash_A
     )
-    part_id_A = manager.contract.getPartId(oem_wartsila.address, "WRT123456")
+    part_id_A = manager.contract.functions.getPartId(oem_wartsila, "WRT123456").call()
     print("Registered part A with ID: ", part_id_A.hex())
     parts_db.append(part_id_A)
 
@@ -51,7 +51,7 @@ def main():
         vessel_id="Vessel B",
         certificate_hash=certificate_hash_B
     )
-    part_id_B = manager.contract.getPartId(oem_abb.address, "ABB654321")
+    part_id_B = manager.contract.functions.getPartId(oem_abb, "ABB654321").call()
     print("Registered part B with ID: ", part_id_B.hex())
     parts_db.append(part_id_B)
     print("Logging service events...")
@@ -60,7 +60,7 @@ def main():
     service_protocol_hash_1 = mock_ipfs_hash("service_protocol_1.pdf")
     tx3 = manager.log_service_event(
         sender_account=service_szczecin,
-        part_id=part_id_A,
+        part_id_hex=part_id_A.hex(),
         service_type="Routine Maintenance",
         service_protocol_hash=service_protocol_hash_1
     )
@@ -69,7 +69,7 @@ def main():
     service_protocol_hash_2 = mock_ipfs_hash("service_protocol_2.pdf")
     tx4 = manager.log_service_event(
         sender_account=service_gdansk,
-        part_id=part_id_A,
+        part_id_hex=part_id_A.hex(),
         service_type="Engine Overhaul",
         service_protocol_hash=service_protocol_hash_2
     )
@@ -77,7 +77,7 @@ def main():
     service_protocol_hash_3 = mock_ipfs_hash("service_protocol_3.pdf")
     tx5 = manager.log_service_event(
         sender_account=service_gdansk,
-        part_id=part_id_B,
+        part_id_hex=part_id_B.hex(),
         service_type="System Calibration",
         service_protocol_hash=service_protocol_hash_3
     )

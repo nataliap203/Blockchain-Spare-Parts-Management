@@ -20,6 +20,11 @@ class LogServiceEventRequest(BaseModel):
     service_type: str
     service_protocol_hash: str
 
+class RoleRequest(BaseModel):
+    sender_address: str
+    target_address: str
+    role_name: str
+
 # === API ENDPOINTS ===
 @app.get("/")
 def read_root():
@@ -30,6 +35,8 @@ def read_root():
     """
     return {"status": "Blockchain API is running.", "backend": "Ethereum"}
 
+# === ACCOUNT MANAGEMENT ===
+
 @app.get("/accounts")
 def get_accounts():
     """Retrieve a list of blockchain accounts.
@@ -38,11 +45,57 @@ def get_accounts():
         dict: A dictionary containing a list of account addresses.
     """
     # Prototype version with test accounts
-    accounts_list = [manager.get_account(i).address for i in range(10)]
+    accounts_list = [manager.get_account(i) for i in range(10)]
     return {"accounts": accounts_list}
-    # I want to change this to real accounts now
-    # accounts_list = [acc.address for acc in manager.get_accounts()]
-    # return {"accounts": accounts_list}
+
+@app.post("/admin/grant-role")
+def grant_role(request: RoleRequest):
+    try:
+        tx_hash_str = manager.grant_role(
+            sender_account=request.sender_address,
+            role_name=request.role_name,
+            target_address=request.target_address
+        )
+        return {"status": "success", "tx_hash": tx_hash_str}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/admin/revoke-role")
+def revoke_role(request: RoleRequest):
+    try:
+        tx_hash_str = manager.revoke_role(
+            sender_account=request.sender_address,
+            role_name=request.role_name,
+            target_address=request.target_address
+        )
+        return {"status": "success", "tx_hash": tx_hash_str}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/admin/check-role/{address}/{role_name}")
+def check_role(address: str, role_name: str):
+    """Check if a specific address has a given role.
+
+    Args:
+        address (str): The blockchain address to check.
+        role_name (str): The name of the role to verify.
+    Returns:
+        dict: A dictionary indicating whether the address has the role.
+    """
+    has_role = manager.check_role(address, role_name)
+    return {"address": address, "role": role_name, "has_role": has_role}
+
+# === PART MANAGEMENT ===
+
+@app.get("/parts")
+def get_all_parts():
+    """Retrieve all registered parts.
+
+    Returns:
+        dict: A dictionary containing a list of all parts.
+    """
+    parts = manager.get_all_parts()
+    return {"parts": parts}
 
 
 @app.get("/parts/{manufacturer}/{serial_number}")
@@ -89,6 +142,8 @@ def check_warranty(part_id: str):
     is_valid, days = manager.check_warranty_status(part_id)
     return {"is_valid": is_valid, "days_left": days}
 
+# === PART REGISTRATION ===
+
 @app.post("/parts/register")
 def register_part(part: RegisterPartRequest):
     """Register a new spare part.
@@ -103,20 +158,19 @@ def register_part(part: RegisterPartRequest):
         dict: Status of the registration including transaction hash and part ID.
     """
     try:
-        sender_acc = manager.get_account(part.sender_address)
-
-        tx = manager.register_part(
-            sender_account=sender_acc,
+        tx_hash = manager.register_part(
+            sender_account=part.sender_address,
             part_name=part.part_name,
             serial_number=part.serial_number,
             warranty_days=part.warranty_days,
             vessel_id=part.vessel_id,
             certificate_hash=part.certificate_hash
         )
-        return {"status": "success", "tx_hash": tx.txn_hash, "part_id": tx.return_value.hex() if hasattr(tx, 'return_value') else "Calculated on chain"}
+        return {"status": "success", "tx_hash": tx_hash, "part_id": manager.contract.functions.getPartId(part.sender_address, part.serial_number).call().hex()}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+# === SERVICE EVENT LOGGING ===
 
 @app.post("/log_service")
 def log_service_event(event: LogServiceEventRequest):
@@ -132,14 +186,23 @@ def log_service_event(event: LogServiceEventRequest):
         dict: Status of the logging including transaction hash.
     """
     try:
-        sender_acc = manager.get_account(event.sender_address)
-
-        tx = manager.log_service_event(
-            sender_account=sender_acc,
-            part_id=bytes.fromhex(event.part_id.replace("0x", "")),
+        tx_hash = manager.log_service_event(
+            sender_account=event.sender_address,
+            part_id_hex=event.part_id,
             service_type=event.service_type,
             service_protocol_hash=event.service_protocol_hash
         )
-        return {"status": "success", "tx_hash": tx.txn_hash}
+        return {"status": "success", "tx_hash": tx_hash}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+# === STATS ===
+
+@app.get("/statistics")
+def get_stats():
+    """Retrieve basic statistics about the spare part management system.
+
+    Returns:
+        dict: A dictionary containing various statistics.
+    """
+    return manager.get_system_stats()

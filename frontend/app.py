@@ -15,6 +15,18 @@ try:
 except requests.exceptions.ConnectionError:
     st.sidebar.error("Blockchain API is not running")
 
+# === Statistics ===
+try:
+    stats_response = requests.get(f"{API_URL}/statistics").json()
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Registered parts", stats_response['total_parts'])
+    col2.metric("Active warranties", stats_response['active_warranties'])
+    col3.metric("Expired warranties", stats_response['expired_warranties'])
+except:
+    st.warning("Cannot load statistics.")
+
+st.markdown('---')
+
 # === Logging Section ===
 st.sidebar.header("Logging")
 accounts_req = requests.get(f"{API_URL}/accounts")
@@ -23,7 +35,7 @@ current_user = st.sidebar.selectbox("Select Account", accounts)
 
 # === Main Section ===
 st.title("Maritime Spare Part Management System")
-tab1, tab2, tab3, tab4 = st.tabs(["Register Part", "Search", "Log Service Event", "Warranty Check"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Register Part", "Search", "Log Service Event", "Warranty Check", "All Parts", "Role management"])
 
 with tab1:
     st.header("Register a New Spare Part")
@@ -109,3 +121,59 @@ with tab4:
                 st.write(f"Warranty Valid: {data.get('is_valid')}, Days Left: {data.get('days_left')}")
             else:
                 st.error(f"Failed to check warranty: {response.json().get('detail', 'Unknown error')}")
+
+with tab5:
+    st.header("All Registered Spare Parts")
+    parts_response = requests.get(f"{API_URL}/parts")
+    if parts_response.status_code == 200:
+        parts = parts_response.json().get("parts", [])
+        for part in parts:
+            st.json(part)
+    else:
+        st.error(f"Failed to fetch parts: {parts_response.status_code}")
+        st.text(parts_response.text)
+
+with tab6:
+    st.header("Role Management")
+    st.info("This section requires ADMIN permissions.")
+
+    with st.form("role_management"):
+        role_action = st.selectbox("Action", ["Grant Role", "Revoke Role"], key="role_action")
+        role_name = st.selectbox("Role", ["OPERATOR", "OEM", "SERVICE"], key="role_name")
+        target_address = st.text_input("Target Address", key="target_address")
+        submitted = st.form_submit_button("Submit")
+        if submitted:
+            if not target_address:
+                st.error("Please enter a target address.")
+            else:
+                payload = {
+                    "sender_address": current_user,
+                    "role_name": role_name,
+                    "target_address": target_address
+                }
+                if role_action == "Grant Role":
+                    response = requests.post(f"{API_URL}/admin/grant-role", json=payload)
+                elif role_action == "Revoke Role":
+                    response = requests.post(f"{API_URL}/admin/revoke-role", json=payload)
+                else:
+                    st.error("Invalid role action selected.")
+
+                if response.status_code == 200:
+                    st.success(f"Role {role_action.lower()} added successfully!")
+                    st.write(response.json())
+                else:
+                    st.error(f"Failed to {role_action.lower()} role: {response.json().get('detail', 'Unknown error')}")
+
+    st.subheader("Check Account Role")
+    check_address = st.text_input("Account Address to Check", key="check_address")
+    check_role_name = st.selectbox("Role to Check", ["OPERATOR", "OEM", "SERVICE"], key="check_role_name")
+    if st.button("Check Role"):
+        if not check_address:
+            st.error("Please enter an account address.")
+        else:
+            response = requests.get(f"{API_URL}/admin/check-role/{check_address}/{check_role_name}")
+            if response.status_code == 200:
+                has_role = response.json().get("has_role", False)
+                st.write(f"Account {check_address} has role {check_role_name}: {has_role}")
+            else:
+                st.error(f"Failed to check role: {response.json().get('detail', 'Unknown error')}")
