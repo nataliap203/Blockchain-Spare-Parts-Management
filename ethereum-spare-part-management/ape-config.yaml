@@ -1,4 +1,4 @@
-name: spare-part-management
+name: ethereum-spare-part-management
 
 solidity:
   version: "0.8.20"

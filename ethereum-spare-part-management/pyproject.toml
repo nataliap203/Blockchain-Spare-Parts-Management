@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "spare-part-management"
+name = "ethereum-spare-part-management"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
