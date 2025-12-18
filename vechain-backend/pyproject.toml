@@ -6,11 +6,13 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "dotenv>=0.9.9",
+    "eth-abi>=2.1.1",
     "py-solc-x>=2.0.5",
     "requests>=2.32.5",
     "setuptools>=80.9.0",
     "thor-devkit>=1.0.14",
     "vechain-thor-devkit>=1.1.2",
+    "web3>=5.23.0",
 ]
 
 [tool.pytest.ini_options]

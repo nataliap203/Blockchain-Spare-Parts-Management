@@ -114,7 +114,7 @@ class MaritimeManager:
         ).transact({'from': sender_account})
 
         receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
-        return tx_hash.hex() # Return transaction hash
+        return tx_hash.hex() 
 
     # === READ METHODS ===
     def get_all_parts(self):

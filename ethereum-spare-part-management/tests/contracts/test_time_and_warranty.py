@@ -4,12 +4,10 @@ from ape import reverts, chain
 def test_warranty_check(accounts, project):
     operator = accounts[0]
     oem = accounts[1]
-    service = accounts[2]
 
     maritime = operator.deploy(project.MaritimeLog)
 
     maritime.grantRole(maritime.ROLE_OEM(), oem.address, sender=operator)
-    maritime.grantRole(maritime.ROLE_SERVICE(), service.address, sender=operator)
 
     serial_number = "SN123456"
     tx = maritime.registerPart("Main Engine", serial_number, 365 * 24 * 60 * 60, "Vessel001", "QmCertificateHash", sender=oem)

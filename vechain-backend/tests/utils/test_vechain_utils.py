@@ -63,7 +63,7 @@ def test_get_function_obj_not_found(sample_abi):
         get_function_obj(sample_abi, "nonExistentFunction")
     assert "Function nonExistentFunction not found in ABI" in str(excinfo.value)
 
-def test_get_function_obj_wrong_type():
+def test_get_function_def_wrong_type():
     """Test retrieving an item of wrong type from ABI raises ValueError."""
     mixed_abi = [
         {
@@ -240,9 +240,9 @@ def test_wait_for_receipt_reverted(mock_get, mock_sleep):
     mock_response.json.return_value = {"reverted": True, "vmError": "Out of gas"}
     mock_get.return_value = mock_response
 
-    receipt = wait_for_receipt("0xTxHash")
-
-    assert receipt is None
+    with pytest.raises(Exception) as excinfo:
+        receipt = wait_for_receipt("0xTxHash")
+    assert "Transaction reverted: Out of gas" in str(excinfo.value)
 
 @patch('utils.vechain_utils.time.sleep')
 @patch('utils.vechain_utils.requests.get')
