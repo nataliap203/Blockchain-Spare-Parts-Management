@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from typing import List, Dict, Any
 
-from src.app.utils.vechain_utils import send_transaction, call_contract, wait_for_receipt
+from src.app.utils.vechain_utils import send_transaction, call_contract, wait_for_receipt, fetch_events
 
 class MaritimeManager:
     def __init__(self, config_file: str = "deployment_details.json"):
@@ -108,7 +108,26 @@ class MaritimeManager:
     # === READ METHODS ===
 
     def get_all_parts(self):
-       pass
+        logs = fetch_events(
+            self.contract_address, self.abi, "PartRegistered"
+        )
+
+        all_parts = []
+        for log in logs:
+            args = log['args']
+            part_id = args['partId']
+            if isinstance(part_id, bytes):
+                part_id = part_id.hex()
+            elif isinstance(part_id, str) and not part_id.startswith("0x"):
+                part_id = "0x" + part_id
+
+            all_parts.append({
+                "part_id": part_id,
+                "part_name": args['partName'],
+                "manufacturer": args['manufacturer'],
+                "serial_number": args['serialNumber']
+            })
+        return all_parts
 
     def get_part_id(self, manufacturer_address: str, serial_number: str):
         part_id = call_contract(

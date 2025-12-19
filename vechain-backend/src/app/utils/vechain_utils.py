@@ -22,6 +22,13 @@ def get_best_block_ref():
     # block_ref is first 8 bytes of best block ID
     return best_block_id[:18]
 
+def get_best_block_number():
+    block_response = requests.get(f"{NODE_URL}/blocks/best")
+    if block_response.status_code != 200:
+        raise Exception(f"Failed to fetch best block: {block_response.text}")
+    block_result = block_response.json()
+    return block_result["number"]
+
 def _get_function_definition(contract_abi, func_name):
     """Helpers to get function definition from ABI.
 
@@ -91,6 +98,59 @@ def call_contract(contract_address, contract_abi, func_name, args):
 
     return {'0': decoded_values[0] if len(decoded_values) == 1 else decoded_values}
     # return decoded_values[0] if len(decoded_values) == 1 else decoded_values
+
+def fetch_events(contract_address, contract_abi, event_name, start_block=0):
+    event_def = next((item for item in contract_abi if item.get('type') == 'event' and item.get('name') == event_name), None)
+    if not event_def:
+        raise ValueError(f"Event {event_name} not found in ABI")
+
+    event_obj = abi.Event(event_def)
+    event_topic = '0x' +event_obj.signature.hex()
+
+    url = f"{NODE_URL}/logs/event"
+    all_logs = []
+    offset = 0
+    limit = 1000
+
+    while True:
+        payload = {
+            "range": {"unit": "block", "from": start_block, "to": get_best_block_number()},
+            "options": {"offset": offset, "limit": limit},
+            "criteriaSet": [{"address": contract_address, "topic0": event_topic}]
+        }
+        response = requests.post(url, json=payload)
+        if response.status_code != 200:
+            raise Exception(f"Failed to fetch events: {response.text}")
+        logs_batch = response.json()
+        if not logs_batch:
+            break
+        all_logs.extend(logs_batch)
+        if len(logs_batch) < limit:
+            break
+        offset += limit
+    decoded_events = []
+    for log in all_logs:
+        try:
+            raw_data = log['data']
+            if raw_data.startswith("0x"):
+                raw_data = raw_data[2:]
+            data_bytes = bytes.fromhex(raw_data)
+
+            topics_bytes = []
+            for t in log['topics']:
+                if t.startswith("0x"):
+                    t = t[2:]
+                topics_bytes.append(bytes.fromhex(t))
+
+            decoded_args = event_obj.decode(data_bytes, topics_bytes)
+            decoded_events.append({
+                "args": decoded_args,
+                "meta": log
+            })
+        except Exception as e:
+            print(f"Failed to decode event log: {e}")
+            continue
+    return decoded_events
 
 def send_transaction(contract_address, contract_abi, func_name, args, private_key):
     func_obj = get_function_obj(contract_abi, func_name)
