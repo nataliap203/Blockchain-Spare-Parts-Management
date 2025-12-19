@@ -1,7 +1,6 @@
 import pytest
 import sys
 import os
-from unittest.mock import patch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from src.app.utils.vechain_utils import send_transaction, call_contract, wait_for_receipt
@@ -61,8 +60,8 @@ def test_full_scenario(solo_accounts, contract_details, deployed_contract_addres
         contract_details['abi'],
         "roles",
         [role_service, service_addr]
-    )
-    assert is_service_granted['0'] is True
+    )['0']
+    assert is_service_granted is True
 
     # OEM registers a part
     serial_number = "PART123456"
@@ -92,10 +91,10 @@ def test_full_scenario(solo_accounts, contract_details, deployed_contract_addres
         contract_details['abi'],
         "parts",
         [part_id]
-    )
-    assert saved_part['7'] is True # exists
-    assert saved_part['1'] == '0x' + oem_addr.hex() # manufacturer
-    assert saved_part['2'] == serial_number # serial number
+    )['0']
+    assert saved_part[7] is True # exists
+    assert saved_part[1] == '0x' + oem_addr.hex() # manufacturer
+    assert saved_part[2] == serial_number # serial number
 
 
     # Service provider performs maintenance
@@ -116,6 +115,6 @@ def test_full_scenario(solo_accounts, contract_details, deployed_contract_addres
         contract_details['abi'],
         "partHistory",
         [part_id, 0]
-    )
-    assert part_history['0'] == '0x' + service_addr.hex() # service provider
-    assert part_history['2'] == "Routine Check" # service type
+    )['0']
+    assert part_history[0] == '0x' + service_addr.hex() # service provider
+    assert part_history[2] == "Routine Check" # service type

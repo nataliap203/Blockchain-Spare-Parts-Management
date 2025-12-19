@@ -1,7 +1,6 @@
 import pytest
 import sys
 import os
-from unittest.mock import patch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from src.app.utils.vechain_utils import send_transaction, call_contract, wait_for_receipt

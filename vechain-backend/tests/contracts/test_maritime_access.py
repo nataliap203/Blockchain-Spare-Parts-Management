@@ -1,9 +1,6 @@
 import pytest
-import time
 import sys
 import os
-import json
-from unittest.mock import patch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from src.app.utils.vechain_utils import send_transaction, call_contract, wait_for_receipt

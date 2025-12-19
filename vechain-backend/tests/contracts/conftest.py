@@ -14,7 +14,7 @@ SOLO_MNEMONIC = "denial kitchen pet squirrel other broom bar gas better priority
 SOLO_CHAIN_TAG = int('0xf6', 16)
 SOLO_NODE_URL = "http://127.0.0.1:8669"
 
-ENERGY_CONTRACT_ADDR = "0x0000000000000000000000000000456E65726779"
+ENERGY_CONTRACT_ADDR = "0x0000000000000000000000000000456E65726779" # VET Energy Contract
 
 @pytest.fixture(scope="session")
 def solo_config():

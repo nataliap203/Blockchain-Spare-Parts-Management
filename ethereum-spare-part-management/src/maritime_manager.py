@@ -92,7 +92,7 @@ class MaritimeManager:
 
     # === TRANSACTION METHODS ====
 
-    def register_part(self, sender_account, part_name: str, serial_number: str, warranty_days: int, vessel_id: str, certificate_hash: str):
+    def register_part(self, sender_account, part_name: str, serial_number: str, warranty_days: int, vessel_id: str, certificate_hash: str) -> str:
         tx_hash = self.contract.functions.registerPart(
             part_name,
             serial_number,
@@ -114,9 +114,10 @@ class MaritimeManager:
         ).transact({'from': sender_account})
 
         receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
-        return tx_hash.hex() 
+        return tx_hash.hex()
 
     # === READ METHODS ===
+
     def get_all_parts(self):
         all_parts = []
         event_filter = self.contract.events.PartRegistered.create_filter(from_block=0)
@@ -137,7 +138,7 @@ class MaritimeManager:
         part_id = self.contract.functions.getPartId(manufacturer_address, serial_number).call()
         part_data = self.contract.functions.parts(part_id).call()
 
-        if part_data[7] == False:  # exists flag
+        if part_data[7] is False:  # exists flag
             return None
 
         return {
@@ -157,10 +158,10 @@ class MaritimeManager:
         raw_history = self.contract.functions.getPartHistory(part_id_bytes).call()
         formatted_history = []
         for event in raw_history:
-            service_provider, service_date, service_type, service_protocol_hash = event
+            service_provider, service_timestamp, service_type, service_protocol_hash = event
             formatted_history.append({
                 "service_provider": service_provider,
-                "service_date": self._format_date(service_date),
+                "service_date": self._format_date(service_timestamp),
                 "service_type": service_type,
                 "service_protocol_hash": service_protocol_hash
             })
