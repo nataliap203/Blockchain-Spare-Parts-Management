@@ -35,7 +35,7 @@ def read_root():
     """
     return {"status": "Blockchain API is running.", "backend": "Ethereum"}
 
-# === ACCOUNT MANAGEMENT ===
+# === ACCOUNTS MANAGEMENT ===
 
 @app.get("/accounts")
 def get_accounts():
@@ -85,7 +85,7 @@ def check_role(address: str, role_name: str):
     has_role = manager.check_role(address, role_name)
     return {"address": address, "role": role_name, "has_role": has_role}
 
-# === PART MANAGEMENT ===
+# === PARTS MANAGEMENT ===
 
 @app.get("/parts")
 def get_all_parts():
@@ -205,4 +205,4 @@ def get_stats():
     Returns:
         dict: A dictionary containing various statistics.
     """
-    return manager.get_system_stats()
+    return {"statistics": manager.get_system_stats()}

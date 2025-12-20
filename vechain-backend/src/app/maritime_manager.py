@@ -23,7 +23,7 @@ class MaritimeManager:
 
     # === ACCESS CONTROL ===
 
-    def grant_role(self, sender_pk, role_name: str, target_account: str):
+    def grant_role(self, sender_pk, role_name: str, target_account_address: str):
         role_bytes = call_contract(
             self.contract_address, self.abi, f"ROLE_{role_name.upper()}", []
         )['0']
@@ -31,7 +31,7 @@ class MaritimeManager:
             self.contract_address,
             self.abi,
             "grantRole",
-            [role_bytes, target_account],
+            [role_bytes, target_account_address],
             sender_pk
         )
         receipt = wait_for_receipt(tx_id)
@@ -48,7 +48,7 @@ class MaritimeManager:
             result = call_contract(
                 self.contract_address,
                 self.abi,
-                "hasRole",
+                "roles",
                 [role_bytes, address_to_check]
             )['0']
             return result
@@ -84,7 +84,7 @@ class MaritimeManager:
             sender_pk
         )
         receipt = wait_for_receipt(tx_id)
-        if receipt is None or receipt.get("reverted"):
+        if receipt is None or receipt.get("reverted") is True:
             raise Exception("Transaction to register part failed.")
 
         return tx_id
@@ -100,14 +100,14 @@ class MaritimeManager:
             sender_pk
         )
         receipt = wait_for_receipt(tx_id)
-        if receipt is None or receipt.get("reverted"):
+        if receipt is None or receipt.get("reverted") is True:
             raise Exception("Transaction to log service event failed.")
 
         return tx_id # hex
 
     # === READ METHODS ===
 
-    def get_all_parts(self):
+    def get_all_parts(self) -> List[Dict]:
         logs = fetch_events(
             self.contract_address, self.abi, "PartRegistered"
         )
@@ -127,18 +127,20 @@ class MaritimeManager:
                 "manufacturer": args['manufacturer'],
                 "serial_number": args['serialNumber']
             })
-        return all_parts
+        return all_parts[::-1]  # Sort by most recent
 
     def get_part_id(self, manufacturer_address: str, serial_number: str):
         part_id = call_contract(
             self.contract_address, self.abi, "getPartId", [manufacturer_address, serial_number]
         )['0']
-        return part_id.hex()
+        return '0x' + part_id.hex()
 
     def get_part_details(self, manufacturer_address: str, serial_number: str) -> Dict[str, Any]:
         part_id_hex = self.get_part_id(manufacturer_address, serial_number)
+        part_id_bytes = bytes.fromhex(part_id_hex[2:] if part_id_hex.startswith("0x") else part_id_hex)
+
         part_data = call_contract(
-            self.contract_address, self.abi, "parts", [ ]
+            self.contract_address, self.abi, "parts", [part_id_bytes]
         )['0']
         if isinstance(part_data, dict):
             part_data = [part_data[str(i)] for i in range(len(part_data))]
@@ -176,11 +178,9 @@ class MaritimeManager:
         return formatted_history[::-1] # Sort by most recent
 
     def check_warranty_status(self, part_id_hex: str):
-        if not part_id_hex.startswith("0x"):
-            part_id_hex = "0x" + part_id_hex
-
+        part_id_bytes = bytes.fromhex(part_id_hex[2:] if part_id_hex.startswith("0x") else part_id_hex)
         status = call_contract(
-            self.contract_address, self.abi, "checkWarrantyStatus", [part_id_hex]
+            self.contract_address, self.abi, "checkWarrantyStatus", [part_id_bytes]
         )['0']
 
         is_valid, time_left = status
@@ -193,21 +193,20 @@ class MaritimeManager:
     # === STATS ===
 
     def get_system_stats(self):
-        pass
-        # all_parts = self.get_all_parts()
+        all_parts = self.get_all_parts()
 
-        # active_warranties = 0
-        # expired_warranties = 0
+        active_warranties = 0
+        expired_warranties = 0
 
-        # for part in all_parts:
-        #     is_valid, _ = self.check_warranty_status(part["part_id"])
-        #     if is_valid:
-        #         active_warranties += 1
-        #     else:
-        #         expired_warranties += 1
+        for part in all_parts:
+            is_valid, _ = self.check_warranty_status(part["part_id"])
+            if is_valid:
+                active_warranties += 1
+            else:
+                expired_warranties += 1
 
-        # return {
-        #     "total_parts": len(all_parts),
-        #     "active_warranties": active_warranties,
-        #     "expired_warranties": expired_warranties
-        # }
+        return {
+            "total_parts": len(all_parts),
+            "active_warranties": active_warranties,
+            "expired_warranties": expired_warranties
+        }

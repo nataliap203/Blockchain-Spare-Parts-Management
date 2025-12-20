@@ -18,12 +18,13 @@ except requests.exceptions.ConnectionError:
 # === Statistics ===
 try:
     stats_response = requests.get(f"{API_URL}/statistics").json()
+    stats_response = stats_response["statistics"]
     col1, col2, col3 = st.columns(3)
     col1.metric("Registered parts", stats_response['total_parts'])
     col2.metric("Active warranties", stats_response['active_warranties'])
     col3.metric("Expired warranties", stats_response['expired_warranties'])
-except:
-    st.warning("Cannot load statistics.")
+except Exception as e:
+    st.warning(f"Cannot load statistics: {e}")
 
 st.markdown('---')
 
@@ -97,7 +98,7 @@ with tab3:
         else:
             payload = {
                 "sender_address": current_user,
-                "part_id": service_part_id,
+                "part_id_hex": service_part_id,
                 "service_type": service_type,
                 "service_protocol_hash": service_protocol_hash
             }

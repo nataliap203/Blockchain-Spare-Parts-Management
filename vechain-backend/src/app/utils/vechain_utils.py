@@ -156,7 +156,8 @@ def send_transaction(contract_address, contract_abi, func_name, args, private_ke
     func_obj = get_function_obj(contract_abi, func_name)
     data = func_obj.encode(args)
     data_hex = '0x' + data.hex()
-    if private_key.startswith('0x'): private_key = private_key[2:]
+    if private_key.startswith('0x'):
+        private_key = private_key[2:]
     private_key_bytes = bytes.fromhex(private_key)
 
     clause = {"to": contract_address, "value": 0, "data": data_hex}
@@ -185,7 +186,7 @@ def wait_for_receipt(tx_id, timeout=30):
         response = requests.get(f"{NODE_URL}/transactions/{tx_id}/receipt")
         receipt = response.json()
         if receipt:
-            print(f"Transaction receipt received: {receipt}")
+            # print(f"Transaction receipt received: {receipt}")
             if receipt.get('reverted'):
                 error_msg = receipt.get('vmError', 'Transaction Reverted without error message')
                 raise Exception(f"Transaction reverted: {error_msg}")
@@ -193,3 +194,14 @@ def wait_for_receipt(tx_id, timeout=30):
         time.sleep(1)
     print("Timeout waiting for transaction receipt.")
     return None
+
+def private_key_to_address(private_key_hex: str) -> str:
+    if private_key_hex.startswith("0x"):
+        private_key_hex = private_key_hex[2:]
+
+    priv_key_bytes = bytes.fromhex(private_key_hex)
+
+    pub_key = cry.secp256k1.derive_publicKey(priv_key_bytes)
+    address_bytes = cry.public_key_to_address(pub_key)
+
+    return "0x" + address_bytes.hex()
