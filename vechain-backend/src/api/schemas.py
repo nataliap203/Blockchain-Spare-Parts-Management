@@ -21,6 +21,10 @@ class RoleGrantRequest(BaseModel):
     role_name: str
     target_address: str
 
+class UserCreateRequest(BaseModel):
+    email: str
+    password: str
+
 # ==== RESPONSE MODELS ====
 class PartResponse(BaseModel):
     part_id: str

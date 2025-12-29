@@ -1,5 +1,6 @@
 import requests
 import time
+import secrets
 import os
 from thor_devkit import cry, transaction, abi
 from web3._utils.abi import get_abi_output_types
@@ -205,3 +206,7 @@ def private_key_to_address(private_key_hex: str) -> str:
     address_bytes = cry.public_key_to_address(pub_key)
 
     return "0x" + address_bytes.hex()
+
+def generate_new_wallet():
+    private_key = secrets.token_hex(32)
+    return '0x' + private_key
