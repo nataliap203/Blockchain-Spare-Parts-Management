@@ -174,8 +174,14 @@ with tab2:
                             st.table(part_history)
                     else:
                         st.error(f"Failed to fetch part history: {history_response.json().get('detail', 'Unknown error')}")
+            elif response.status_code == 404:
+                st.warning("Part not found. Please check the Manufacturer Address and Serial Number.")
             else:
-                st.error(f"Part not found: {response.json().get('detail', 'Unknown error')}")
+                try:
+                    error_detail = response.json().get("detail", "Unknown error occurred")
+                except Exception:
+                    error_detail = response.text
+                st.error(f"Part not found: {error_detail}")
 
 # --- Tab 3: Log Service Event (Auth required) ---
 with tab3:

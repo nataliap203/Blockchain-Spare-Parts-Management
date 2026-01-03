@@ -87,11 +87,12 @@ def deploy():
             time.sleep(3)
             receipt_response = requests.get(f"{NODE_URL}/transactions/{tx_id}/receipt")
             receipt = receipt_response.json()
-            if receipt["reverted"]:
+            if receipt is not None and receipt.get("reverted"):
                 print("Transaction reverted.")
                 return
-            contract_address = receipt['outputs'][0]['contractAddress']
-            break
+            if receipt is not None:
+                contract_address = receipt['outputs'][0]['contractAddress']
+                break
 
         print(f"Transaction sent successfully. TX ID: {tx_id}")
 

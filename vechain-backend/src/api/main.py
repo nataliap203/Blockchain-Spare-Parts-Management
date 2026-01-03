@@ -29,7 +29,6 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="Spare Part Management API - VeChain", lifespan=lifespan)
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)) -> User:
@@ -45,6 +44,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Dep
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
+
+# === API ENDPOINTS ===
 
 @app.get("/")
 def root():
@@ -75,12 +76,21 @@ def register(user_data: UserCreateRequest, session: Session = Depends(get_sessio
     )
     session.add(new_user)
     session.commit()
+
+    try:
+        amount_to_fund = 50.0
+        tx_id = manager.fund_account(wallet_address, amount_to_fund)
+        print(f"Funded new user {email} with {amount_to_fund} VTHO in TX {tx_id}")
+    except Exception as e:
+        print(f"Warning: Failed to fund new user {email}: {e}")
+
     session.refresh(new_user)
 
     return {"status": "success", "email": email, "wallet_address": wallet_address}
 
 @app.post("/token")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
+    """Authenticate user and return JWT token."""
     user = session.exec(select(User).where(User.email == form_data.username)).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
@@ -91,11 +101,12 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = D
 # === ACCOUNTS MANAGEMENT ===
 @app.get("/accounts")
 def get_accounts(session: Session = Depends(get_session)):
+    """Retrieve all registered user wallet addresses."""
     users = session.exec(select(User)).all()
     return {"accounts": [user.wallet_address for user in users]}
 
 @app.post("/admin/grant-role")
-def grant_role(request: RoleGrantRequest, current_user: User = Depends(get_current_user)):
+def grant_role(request: RoleGrantRequest, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     try:
         sender_pk = decrypt_private_key(current_user.encrypted_private_key)
         tx_id = manager.grant_role(
@@ -103,12 +114,28 @@ def grant_role(request: RoleGrantRequest, current_user: User = Depends(get_curre
             role_name=request.role_name,
             target_account_address=request.target_address
         )
+        user_to_update = session.exec(
+            select(User).where(User.wallet_address == request.target_address)
+        ).first()
+
+        if user_to_update:
+            user_to_update.role = request.role_name.upper()
+            session.add(user_to_update)
+            session.commit()
+            session.refresh(user_to_update)
+        else:
+            raise ValueError(f"User with address {request.target_address} not found in database.")
+
         return {"status": "success", "tx_hash": tx_id}
+    except PermissionError as pe:
+        raise HTTPException(status_code=403, detail=str(pe))
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/admin/revoke-role")
-def revoke_role(request: RoleGrantRequest, current_user: User = Depends(get_current_user)):
+def revoke_role(request: RoleGrantRequest, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     try:
         sender_pk = decrypt_private_key(current_user.encrypted_private_key)
         tx_id = manager.revoke_role(
@@ -116,7 +143,24 @@ def revoke_role(request: RoleGrantRequest, current_user: User = Depends(get_curr
             role_name=request.role_name,
             target_account=request.target_address
         )
+        user_to_update = session.exec(
+            select(User).where(User.wallet_address == request.target_address)
+        ).first()
+
+        if user_to_update:
+            if user_to_update.role == request.role_name.upper():
+                user_to_update.role = "USER"
+                session.add(user_to_update)
+                session.commit()
+                session.refresh(user_to_update)
+        else:
+            raise ValueError(f"User with address {request.target_address} not found in database.")
+
         return {"status": "success", "tx_hash": tx_id}
+    except PermissionError as pe:
+        raise HTTPException(status_code=403, detail=str(pe))
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -125,6 +169,8 @@ def check_role(address: str, role_name: str):
     try:
         has_role = manager.check_role(address_to_check=address, role_name=role_name)
         return {"address": address, "role": role_name, "has_role": has_role}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -143,8 +189,10 @@ def get_part(manufacturer: str, serial_number: str):
     try:
         part_details = manager.get_part_details(manufacturer_address=manufacturer, serial_number=serial_number)
         if part_details is None:
-            raise HTTPException(status_code=404, detail="Part not found")
+            raise HTTPException(status_code=404, detail="Part does not exist in the system.")
         return {"part_details": part_details}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -156,11 +204,11 @@ def get_part_history(part_id_hex: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/warranty/{part_id}")
-def check_warranty(part_id: str):
+@app.get("/warranty/{part_id_hex}")
+def check_warranty(part_id_hex: str):
     try:
-        is_valid, days_left = manager.check_warranty_status(part_id_hex=part_id)
-        return {"part_id": part_id, "is_valid": is_valid, "days_left": days_left}
+        is_valid, days_left = manager.check_warranty_status(part_id_hex=part_id_hex)
+        return {"part_id": part_id_hex, "is_valid": is_valid, "days_left": days_left}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -170,7 +218,7 @@ def check_warranty(part_id: str):
 def register_part(request: RegisterPartRequest, current_user: User = Depends(get_current_user)):
     try:
         if request.sender_address != current_user.wallet_address:
-            raise HTTPException(status_code=403, detail="Sender address does not match authenticated user.")
+            raise HTTPException(status_code=403, detail="Wallet mismatch: Sender address does not match authenticated user.")
 
         sender_pk = decrypt_private_key(current_user.encrypted_private_key)
         tx_id = manager.register_part(
@@ -186,6 +234,12 @@ def register_part(request: RegisterPartRequest, current_user: User = Depends(get
             serial_number=request.serial_number
         )
         return {"status": "success", "tx_hash": tx_id, "part_id": part_id}
+    except PermissionError as pe:
+        raise HTTPException(status_code=403, detail=str(pe))
+    except ValueError as ve:
+        if "already registered" in str(ve):
+            raise HTTPException(status_code=409, detail=str(ve))
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -205,15 +259,21 @@ def log_service_event(request: LogServiceEventRequest, current_user: User = Depe
             service_protocol_hash=request.service_protocol_hash
         )
         return {"status": "success", "tx_hash": tx_id}
+    except PermissionError as pe:
+        raise HTTPException(status_code=403, detail=str(pe))
+    except ValueError as ve:
+        if "does not exist" in str(ve):
+            raise HTTPException(status_code=404, detail=str(ve))
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# === STATS ===
+# === STATISTICS ===
 
 @app.get("/statistics")
-def get_stats():
+def get_statistics():
     try:
-        stats = manager.get_system_stats()
-        return {"statistics": stats}
+        statistics = manager.get_system_statistics()
+        return {"statistics": statistics}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
