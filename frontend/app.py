@@ -108,14 +108,17 @@ with tab1:
     if not st.session_state["token"]:
         st.warning("Please Log in or Register using the sidebar to access this section.")
     else:
-        part_name = st.text_input("Part Name", key="part_name")
-        serial_number = st.text_input("Serial Number", key="serial_number")
-        warranty_days = st.number_input("Warranty Period (days)", min_value=0, value=365, key="warranty_days")
-        vessel_id = st.text_input("Vessel ID", key="vessel_id")
-        certificate_hash = st.text_input("Certificate Hash", key="certificate_hash")
-        if st.button("Register Part"):
+        with st.form("register_part_form"):
+            part_name = st.text_input("Part Name", key="part_name")
+            serial_number = st.text_input("Serial Number", key="serial_number")
+            warranty_days = st.number_input("Warranty Period (days)", min_value=0, value=365, key="warranty_days")
+            vessel_id = st.text_input("Vessel ID", key="vessel_id")
+            certificate_hash = st.text_input("Certificate Hash", key="certificate_hash")
+
+            submitted = st.form_submit_button("Register Part")
+        if submitted:
             if not all([part_name, serial_number, vessel_id, certificate_hash]):
-                st.error("Please fill in all fields.")
+                st.error("All fields are required.")
             else:
                 payload = {
                     "sender_address": st.session_state["wallet_address"],
@@ -125,37 +128,54 @@ with tab1:
                     "vessel_id": vessel_id,
                     "certificate_hash": certificate_hash
                 }
-                response = requests.post(f"{API_URL}/parts/register", json=payload, headers=get_auth_headers())
-                if response.status_code == 200:
-                    st.success("Part registered successfully!")
-                    st.write(response.json())
-                else:
-                    st.error(f"Failed to register part: {response.json().get('detail', 'Unknown error')}")
+                with st.spinner("Registering part..."):
+                    try:
+                        response = requests.post(f"{API_URL}/parts/register", json=payload, headers=get_auth_headers())
+                        if response.status_code == 200:
+                            data = response.json()
+                            st.success("Part registered successfully!")
+                            st.info(f"**Transaction Hash:** `{data['tx_hash']}`")
+                            st.success(f"**Generated Part ID:** `{data['part_id']}`")
+                        elif response.status_code == 403:
+                            st.error(f"Permission denied: {response.json().get('detail', 'You do not have permission to register parts.')}")
+                        elif response.status_code == 409:
+                            st.warning(f"Conflict: {response.json().get('detail', 'Part with this serial number already exists.')}")
+                        else:
+                            st.error(f"Failed to register part: {response.json().get('detail', 'Unknown error')}")
+                    except requests.exceptions.ConnectionError:
+                        st.error("Cannot connect to the API. Please ensure the backend is running.")
 
 # --- Tab 2: Search Part (Public/Read-Only) ---
 with tab2:
     st.header("Search Spare Parts")
-    search_manufacturer = st.text_input("Manufacturer Address", key="search_manufacturer", value=st.session_state["wallet_address"])
-    search_serial_number = st.text_input("Serial Number", key="search_serial_number")
+    with st.form("search_part_form"):
+        search_manufacturer = st.text_input("Manufacturer Address", key="search_manufacturer", value=st.session_state["wallet_address"])
+        search_serial_number = st.text_input("Serial Number", key="search_serial_number")
 
-    if st.button("Search Part"):
-        resonse = requests.get(f"{API_URL}/parts/{search_manufacturer}/{search_serial_number}")
-        if resonse.status_code == 200:
-            data = resonse.json().get("part_details", {})
-            st.json(data)
-            part_id = data.get("part_id")
-
-            if part_id:
-                st.subheader("Service History")
-                history_response = requests.get(f"{API_URL}/history/{part_id}")
-                if history_response.status_code == 200:
-                    # st.write("Service History: ", history_response.json().get("part_history", []))
-                    st.table(history_response.json().get("part_history", []))
-                else:
-                    st.error(f"Failed to fetch part history: {history_response.status_code}")
-                    st.text(history_response.text)
+        submitted = st.form_submit_button("Search Part")
+    if submitted:
+        if not all([search_manufacturer, search_serial_number]):
+            st.error("All fields are required.")
         else:
-            st.error(f"Part not found: {resonse.status_code}")
+            response = requests.get(f"{API_URL}/parts/{search_manufacturer}/{search_serial_number}")
+            if response.status_code == 200:
+                data = response.json().get("part_details", {})
+                st.json(data)
+                part_id = data.get("part_id")
+
+                if part_id:
+                    st.subheader("Service History")
+                    history_response = requests.get(f"{API_URL}/history/{part_id}")
+                    if history_response.status_code == 200:
+                        part_history = history_response.json().get("part_history", [])
+                        if part_history is None or len(part_history) == 0:
+                            st.info("No service history found for this part.")
+                        else:
+                            st.table(part_history)
+                    else:
+                        st.error(f"Failed to fetch part history: {history_response.json().get('detail', 'Unknown error')}")
+            else:
+                st.error(f"Part not found: {response.json().get('detail', 'Unknown error')}")
 
 # --- Tab 3: Log Service Event (Auth required) ---
 with tab3:
@@ -163,12 +183,15 @@ with tab3:
     if not st.session_state["token"]:
         st.warning("Please Log in or Register using the sidebar to access this section.")
     else:
-        service_part_id = st.text_input("Part ID (hex)", key="service_part_id")
-        service_type = st.text_input("Service Type", key="service_type")
-        service_protocol_hash = st.text_input("Service Protocol Hash", key="service_protocol_hash")
-        if st.button("Log Service Event"):
+        with st.form("log_service_event_form"):
+            service_part_id = st.text_input("Part ID (hex)", key="service_part_id")
+            service_type = st.text_input("Service Type", key="service_type")
+            service_protocol_hash = st.text_input("Service Protocol Hash", key="service_protocol_hash")
+            submitted = st.form_submit_button("Log Service Event")
+
+        if submitted:
             if not all([service_part_id, service_type, service_protocol_hash]):
-                st.error("Please fill in all fields.")
+                st.error("All fields are required.")
             else:
                 payload = {
                     "sender_address": st.session_state["wallet_address"],
@@ -186,8 +209,10 @@ with tab3:
 # --- Tab 4: Warranty Check (Public/Read-Only) ---
 with tab4:
     st.header("Check Warranty Status")
-    warranty_part_id = st.text_input("Part ID (hex)", key="warranty_part_id")
-    if st.button("Check Warranty"):
+    with st.form("warranty_check_form"):
+        warranty_part_id = st.text_input("Part ID (hex)", key="warranty_part_id")
+        submitted = st.form_submit_button("Check Warranty")
+    if submitted:
         if not warranty_part_id:
             st.error("Please enter a Part ID.")
         else:
@@ -208,7 +233,10 @@ with tab5:
         parts_response = requests.get(f"{API_URL}/parts")
         if parts_response.status_code == 200:
             parts = parts_response.json().get("parts", [])
-            st.dataframe(parts)
+            if len(parts) == 0:
+                st.info("No parts registered yet.")
+            else:
+                st.dataframe(parts)
         else:
             st.error(f"Failed to fetch parts: {parts_response.status_code}")
 
@@ -236,20 +264,26 @@ with tab6:
                             "target_address": target_address
                         }
                         endpoint = "grant-role" if role_action == "Grant Role" else "revoke-role"
-                        response = requests.post(f"{API_URL}/admin/{endpoint}", json=payload, headers=get_auth_headers())
+                        with st.spinner(f"{role_action} in progress..."):
+                            response = requests.post(f"{API_URL}/admin/{endpoint}", json=payload, headers=get_auth_headers())
 
-                        if response.status_code == 200:
-                            st.success(f"Success: {role_action.lower()} - {role_name}")
-                            # st.write(response.json())
-                        else:
-                            st.error(f"Failed to {role_action.lower()}: {response.json().get('detail', 'Unknown error')}")
-
+                            if response.status_code == 200:
+                                st.success(f"{role_action} {role_name} executed successfully!")
+                                st.caption(f"Transaction Hash: `{response.json().get('tx_hash')}`")
+                            else:
+                                error_detail = response.json().get('detail', 'Unknown error')
+                                if "missing role" in error_detail.lower():
+                                    st.error("You do not have OPERATOR role to perform this action.")
+                                else:
+                                    st.error(f"Failed to {role_action.lower()}: {error_detail}")
         st.divider()
 
     st.subheader("Check Account Role")
-    check_address = st.text_input("Account Address to Check", key="check_address")
-    check_role_name = st.selectbox("Role to Check", ["OPERATOR", "OEM", "SERVICE"], key="check_role_name")
-    if st.button("Check Role"):
+    with st.form("check_role_form"):
+        check_address = st.text_input("Account Address to Check", key="check_address")
+        check_role_name = st.selectbox("Role to Check", ["OPERATOR", "OEM", "SERVICE"], key="check_role_name")
+        submitted = st.form_submit_button("Check Role")
+    if submitted:
         response = requests.get(f"{API_URL}/admin/check-role/{check_address}/{check_role_name}")
         if response.status_code == 200:
             data = response.json()

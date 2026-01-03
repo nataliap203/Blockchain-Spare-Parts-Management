@@ -1,3 +1,4 @@
+# VECHAIN SPARE PART MANAGEMENT API
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
