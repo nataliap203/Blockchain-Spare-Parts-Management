@@ -1,5 +1,6 @@
 import requests
 import time
+import secrets
 import os
 from thor_devkit import cry, transaction, abi
 from web3._utils.abi import get_abi_output_types
@@ -87,7 +88,7 @@ def call_contract(contract_address, contract_abi, func_name, args):
 
     result = response.json()
     if result[0].get('reverted'):
-        raise Exception(f"Revert: {result[0].get('vmError')}")
+        raise Exception(f"Reverted: {result[0].get('vmError')}")
 
     return_data_hex = result[0]['data']
     if return_data_hex.startswith('0x'):
@@ -153,32 +154,35 @@ def fetch_events(contract_address, contract_abi, event_name, start_block=0):
     return decoded_events
 
 def send_transaction(contract_address, contract_abi, func_name, args, private_key):
-    func_obj = get_function_obj(contract_abi, func_name)
-    data = func_obj.encode(args)
-    data_hex = '0x' + data.hex()
-    if private_key.startswith('0x'):
-        private_key = private_key[2:]
-    private_key_bytes = bytes.fromhex(private_key)
+    try:
+        func_obj = get_function_obj(contract_abi, func_name)
+        data = func_obj.encode(args)
+        data_hex = '0x' + data.hex()
+        if private_key.startswith('0x'):
+            private_key = private_key[2:]
+        private_key_bytes = bytes.fromhex(private_key)
 
-    clause = {"to": contract_address, "value": 0, "data": data_hex}
-    block_ref = get_best_block_ref()
+        clause = {"to": contract_address, "value": 0, "data": data_hex}
+        block_ref = get_best_block_ref()
 
-    tx_body = {"chainTag": CHAIN_TAG, "blockRef": block_ref, "expiration": 720,
-            "clauses": [clause], "gasPriceCoef": 0, "gas": 1_000_000, "dependsOn": None, "nonce": int(time.time()) }
-    tx = transaction.Transaction(tx_body)
+        tx_body = {"chainTag": CHAIN_TAG, "blockRef": block_ref, "expiration": 720,
+                "clauses": [clause], "gasPriceCoef": 0, "gas": 1_000_000, "dependsOn": None, "nonce": int(time.time()) }
+        tx = transaction.Transaction(tx_body)
 
-    tx_hash = tx.get_signing_hash()
-    signature = cry.secp256k1.sign(tx_hash, private_key_bytes)
-    tx.set_signature(signature)
+        tx_hash = tx.get_signing_hash()
+        signature = cry.secp256k1.sign(tx_hash, private_key_bytes)
+        tx.set_signature(signature)
 
-    raw_tx = "0x" + tx.encode().hex()
+        raw_tx = "0x" + tx.encode().hex()
 
-    response = requests.post(f"{NODE_URL}/transactions", json={"raw": raw_tx})
+        response = requests.post(f"{NODE_URL}/transactions", json={"raw": raw_tx})
 
-    if response.status_code != 200:
-        raise Exception(f"Transaction failed: {response.text}")
+        if response.status_code != 200:
+            raise Exception(f"Transaction failed: {response.text}")
 
-    return response.json().get("id")
+        return response.json().get("id")
+    except Exception as e:
+        raise Exception(f"Blockchain transaction failed: {str(e)}")
 
 def wait_for_receipt(tx_id, timeout=30):
     print(f"Waiting for transaction receipt for TX ID: {tx_id}")
@@ -205,3 +209,7 @@ def private_key_to_address(private_key_hex: str) -> str:
     address_bytes = cry.public_key_to_address(pub_key)
 
     return "0x" + address_bytes.hex()
+
+def generate_new_wallet():
+    private_key = secrets.token_hex(32)
+    return '0x' + private_key

@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 
-# ==== REQUEST MODELS ====
+# === REQUEST MODELS ===
 class RegisterPartRequest(BaseModel):
     sender_address: str
     part_name: str
@@ -16,7 +16,7 @@ class LogServiceEventRequest(BaseModel):
     service_type: str
     service_protocol_hash: str
 
-class RoleGrantRequest(BaseModel):
+class RoleRequest(BaseModel):
     sender_address: str
     role_name: str
     target_address: str
