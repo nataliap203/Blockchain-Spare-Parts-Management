@@ -7,7 +7,7 @@ name = "ethereum-backend"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "anvil>=0.0.2",
     "ape-alchemy>=0.8.10",

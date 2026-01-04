@@ -8,11 +8,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY", "super_secret") # Secret key for JWT
+SECRET_KEY = os.getenv("SECRET_KEY") # Secret key for JWT
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 # Token expiry time
 
-MASTER_ENCRYPTION_KEY = os.getenv("MASTER_ENCRYPTION_KEY", "default_master_key_to_change") # Key for encrypting private keys
+MASTER_ENCRYPTION_KEY = os.getenv("MASTER_ENCRYPTION_KEY") # Key for encrypting private keys
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 cipher_suite = Fernet(MASTER_ENCRYPTION_KEY.encode())

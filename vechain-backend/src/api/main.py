@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
 
     try:
         global manager
-        manager = MaritimeManager(config_file="deployment_details.json")
+        manager = MaritimeManager()
     except Exception as e:
         print(f"Warning: Manager not initialized: {e}")
         manager = None
@@ -49,7 +49,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Dep
 
 @app.get("/")
 def root():
-    return {"status": "VeChain Spare Part Management API is running.", "network": "VeChain Testnet"}
+    return {"status": "VeChain Spare Part Management API is running.", "network_name": "VeChain Testnet"}
 
 # === REGISTRATION AND AUTHENTICATION ===
 
