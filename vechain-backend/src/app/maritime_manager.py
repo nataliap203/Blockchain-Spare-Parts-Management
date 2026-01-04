@@ -40,6 +40,19 @@ class MaritimeManager:
         if not re.match(r"^0x[a-fA-F0-9]{40}$", address):
             raise ValueError(f"Invalid address format: {address}")
 
+    def _validate_part_id_format(self, part_id_hex: str) -> bytes:
+        clean_hex = part_id_hex.strip().lower()
+        clean_hex = clean_hex[2:] if clean_hex.startswith("0x") else clean_hex
+
+        try:
+            int(clean_hex, 16)
+        except ValueError:
+            raise ValueError(f"Invalid part ID format: '{part_id_hex}'. Must be a hexadecimal string.")
+
+        if len(clean_hex) != 64:
+            raise ValueError(f"Invalid part ID length: '{part_id_hex}'. Must be 32 bytes (64 hex characters).")
+        return bytes.fromhex(clean_hex)
+
     def fund_account(self, target_address: str, amount_vtho: float = 50.0) -> str:
         operator_pk = os.getenv("OPERATOR_PRIVATE_KEY")
         if operator_pk is None:
@@ -83,7 +96,7 @@ class MaritimeManager:
         try:
             role_bytes = call_contract(
                 self.contract_address, self.abi, f"ROLE_{role_name.upper()}", []
-            )['0']
+            )
             tx_id = send_transaction(
                 self.contract_address,
                 self.abi,
@@ -110,13 +123,13 @@ class MaritimeManager:
         try:
             role_bytes = call_contract(
                 self.contract_address, self.abi, f"ROLE_{role_name.upper()}", []
-            )['0']
+            )
             result = call_contract(
                 self.contract_address,
                 self.abi,
                 "roles",
                 [role_bytes, address_to_check]
-            )['0']
+            )
             return result
         except Exception as e:
             raise Exception(f"Failed to check role: {e}")
@@ -137,7 +150,7 @@ class MaritimeManager:
         try:
             role_bytes = call_contract(
                 self.contract_address, self.abi, f"ROLE_{role_name.upper()}", []
-            )['0']
+            )
             tx_id = send_transaction(
                 self.contract_address,
                 self.abi,
@@ -167,7 +180,7 @@ class MaritimeManager:
         part_id_bytes = bytes.fromhex(part_id[2:] if part_id.startswith("0x") else part_id)
         part_data = call_contract(
             self.contract_address, self.abi, "parts", [part_id_bytes]
-        )['0']
+        )
         exists = part_data[7]
         if exists:
             raise ValueError(f"Part with serial number {serial_number} is already registered by this OEM.")
@@ -189,20 +202,18 @@ class MaritimeManager:
             raise f"Failed to register part: {str(e)}"
 
     def log_service_event(self, sender_pk: str, part_id_hex: str, service_type: str, service_protocol_hash: str) -> str:
-        clean_hex = part_id_hex.replace("0x", "")
-        if not isinstance(part_id_hex, str) or not all(c in '0123456789abcdefABCDEF' for c in clean_hex) or len(clean_hex) != 64:
-            raise ValueError("Invalid part ID format. Must be a hexadecimal string of 32 bytes (64 hex characters).")
         sender_address = private_key_to_address(sender_pk)
+
         if not (self.check_role(sender_address, "SERVICE") or self.check_role(sender_address, "OPERATOR")):
             raise PermissionError(f"Account {sender_address} lacks SERVICE or OPERATOR role required to log service events.")
 
+
         # Verify that the part exists to prevent sending transaction that will revert
-        part_id_bytes = bytes.fromhex(clean_hex)
+        part_id_bytes = self._validate_part_id_format(part_id_hex)
         part_data = call_contract(
             self.contract_address, self.abi, "parts", [part_id_bytes]
-        )['0']
+        )
         exists = part_data[7]
-
         if not exists:
             raise ValueError(f"Part with ID {part_id_hex} does not exist in the registry.")
 
@@ -255,7 +266,7 @@ class MaritimeManager:
         try:
             part_id = call_contract(
                 self.contract_address, self.abi, "getPartId", [manufacturer_address, serial_number]
-            )['0']
+            )
             return '0x' + part_id.hex()
         except Exception as e:
             if "AddressEncoder" in str(e) or "cannot be encoded" in str(e):
@@ -263,15 +274,13 @@ class MaritimeManager:
             raise Exception(f"Failed to get part ID: {str(e)}")
 
     def get_part_details(self, manufacturer_address: str, serial_number: str) -> Dict[str, Any]:
-        self._validate_address(manufacturer_address)
-
         try:
             part_id_hex = self.get_part_id(manufacturer_address, serial_number)
-            part_id_bytes = bytes.fromhex(part_id_hex.replace("0x", ""))
+            part_id_bytes = bytes.fromhex(part_id_hex[2:] if part_id_hex.startswith("0x") else part_id_hex)
 
             part_data = call_contract(
                 self.contract_address, self.abi, "parts", [part_id_bytes]
-            )['0']
+            )
             if isinstance(part_data, dict):
                 part_data = [part_data[str(i)] for i in range(len(part_data))]
 
@@ -294,15 +303,12 @@ class MaritimeManager:
             raise Exception(f"Failed to get part details: {str(e)}")
 
     def get_part_history(self, part_id_hex: str):
-        clean_hex = part_id_hex.replace("0x", "")
-        if len(clean_hex) != 64 or not all(c in '0123456789abcdefABCDEF' for c in clean_hex):
-            raise ValueError("Invalid Part ID format. Must be 64 hex characters.")
-        part_id_bytes = bytes.fromhex(clean_hex)
+        part_id_bytes = self._validate_part_id_format(part_id_hex)
 
         try:
             raw_history = call_contract(
                 self.contract_address, self.abi, "getPartHistory", [part_id_bytes]
-            )['0']
+            )
             formatted_history = []
             for event in raw_history:
                 service_provider, service_timestamp, service_type, service_protocol_hash = event
@@ -313,20 +319,17 @@ class MaritimeManager:
                     "service_protocol_hash": service_protocol_hash
                 })
 
-            return formatted_history[::-1] # Sort by most recent
+            return formatted_history[::-1] # Return in reverse chronological order
         except Exception as e:
             raise Exception(f"Failed to get part history: {str(e)}")
 
     def check_warranty_status(self, part_id_hex: str):
-        clean_hex = part_id_hex.replace("0x", "")
-        if len(clean_hex) != 64 or not all(c in '0123456789abcdefABCDEF' for c in clean_hex):
-            raise ValueError("Invalid Part ID format. Must be 64 hex characters.")
-        part_id_bytes = bytes.fromhex(clean_hex)
+        part_id_bytes = self._validate_part_id_format(part_id_hex)
 
         try:
             status = call_contract(
                 self.contract_address, self.abi, "checkWarrantyStatus", [part_id_bytes]
-            )['0']
+            )
         except Exception as e:
             if "part not registered" in str(e).lower() or "reverted" in str(e).lower():
                 raise ValueError("Part does not exist in the system.")

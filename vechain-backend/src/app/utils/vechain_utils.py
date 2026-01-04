@@ -84,21 +84,33 @@ def call_contract(contract_address, contract_abi, func_name, args):
     response = requests.post(f"{NODE_URL}/accounts/*", json=payload)
 
     if response.status_code != 200:
-        raise Exception(f"Contract call failed: {response.text}")
+        raise Exception(f"Node connection failed: {response.text}")
 
     result = response.json()
+
     if result[0].get('reverted'):
-        raise Exception(f"Reverted: {result[0].get('vmError')}")
+        revert_data = result[0].get('data', '')
+        revert_data = revert_data[2:] if revert_data.startswith('0x') else revert_data
+
+        if revert_data.startswith('08c379a0'):  # Function selector for Error(string)
+            try:
+                reason = decode_abi(['string'], bytes.fromhex(revert_data[8:]))[0] # Decode the revert reason after the selector
+                raise ValueError(f"Contract execution reverted: {reason}")
+            except Exception:
+                raise Exception(f"Contract Execution Reverted (Raw): {result[0].get('vmError')}") # If decoding fails, raise raw error
+        else:
+            raise Exception(f"Contract Execution Reverted (Raw): {result[0].get('vmError')}") # If not a standard revert, raise raw error
 
     return_data_hex = result[0]['data']
-    if return_data_hex.startswith('0x'):
-        return_data_hex = return_data_hex[2:]
+    return_data_hex = return_data_hex[2:] if return_data_hex.startswith('0x') else return_data_hex
+
+    if not return_data_hex:
+        return None
 
     output_types = get_abi_output_types(func_def)
     decoded_values = decode_abi(output_types, bytes.fromhex(return_data_hex))
 
-    return {'0': decoded_values[0] if len(decoded_values) == 1 else decoded_values}
-    # return decoded_values[0] if len(decoded_values) == 1 else decoded_values
+    return decoded_values[0] if len(decoded_values) == 1 else decoded_values
 
 def fetch_events(contract_address, contract_abi, event_name, start_block=0):
     event_def = next((item for item in contract_abi if item.get('type') == 'event' and item.get('name') == event_name), None)
@@ -190,7 +202,6 @@ def wait_for_receipt(tx_id, timeout=30):
         response = requests.get(f"{NODE_URL}/transactions/{tx_id}/receipt")
         receipt = response.json()
         if receipt:
-            # print(f"Transaction receipt received: {receipt}")
             if receipt.get('reverted'):
                 error_msg = receipt.get('vmError', 'Transaction Reverted without error message')
                 raise Exception(f"Transaction reverted: {error_msg}")

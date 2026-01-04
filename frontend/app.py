@@ -205,12 +205,13 @@ with tab3:
                     "service_type": service_type,
                     "service_protocol_hash": service_protocol_hash
                 }
-                response = requests.post(f"{API_URL}/log_service", json=payload, headers=get_auth_headers())
-                if response.status_code == 200:
-                    st.success("Service event logged successfully!")
-                    st.write(response.json())
-                else:
-                    st.error(f"Failed to log service event: {response.json().get('detail', 'Unknown error')}")
+                with st.spinner("Logging service event..."):
+                    response = requests.post(f"{API_URL}/log_service", json=payload, headers=get_auth_headers())
+                    if response.status_code == 200:
+                        st.success("Service event logged successfully!")
+                        st.write(response.json())
+                    else:
+                        st.error(f"Failed to log service event: {response.json().get('detail', 'Unknown error')}")
 
 # --- Tab 4: Warranty Check (Public/Read-Only) ---
 with tab4:
