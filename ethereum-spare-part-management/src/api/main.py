@@ -56,6 +56,7 @@ def get_custodial_account(user: User) -> Account:
         raise HTTPException(status_code=400, detail=f"Wallet decryption failed: {str(e)}")
 
 # === API ENDPOINTS ===
+
 @app.get("/")
 def read_root():
     """Root endpoint to check API status.
@@ -63,7 +64,7 @@ def read_root():
     Returns:
         dict: Status message and backend information.
     """
-    return {"status": "Blockchain API is running.", "backend": "Ethereum"}
+    return {"status": "Blockchain API is running.", "network": "Ethereum"}
 
 
 # === REGISTRATION AND AUTHENTICATION ===
@@ -172,6 +173,8 @@ def revoke_role(request: RoleRequest, current_user: User = Depends(get_current_u
                 session.add(user_to_update)
                 session.commit()
                 session.refresh(user_to_update)
+        else:
+            raise ValueError(f"User with address {request.target_address} not found in database.")
 
         return {"status": "success", "tx_hash": tx_hash_str}
     except PermissionError as pe:
@@ -299,18 +302,15 @@ def register_part(request: RegisterPartRequest, current_user: User = Depends(get
             certificate_hash=request.certificate_hash
         )
         part_id = manager.contract.functions.getPartId(sender_account.address, request.serial_number).call().hex()
-        return {
-            "status": "success",
-            "message": f"Part '{request.part_name}' registered successfully.",
-            "tx_hash": tx_hash,
-            "part_id": part_id
-        }
+        return {"status": "success", "tx_hash": tx_hash, "part_id": part_id}
     except PermissionError as pe:
         raise HTTPException(status_code=403, detail=str(pe))
     except ValueError as ve:
-        raise HTTPException(status_code=409, detail=str(ve))
+        if "already registered" in str(ve):
+            raise HTTPException(status_code=409, detail=str(ve))
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Blockchain Error: {str(e)}")
+        raise HTTPException(status_code=500, detail={str(e)})
 
 # === SERVICE EVENT LOGGING ===
 
@@ -339,17 +339,15 @@ def log_service_event(request: LogServiceEventRequest, current_user: User = Depe
             service_type=request.service_type,
             service_protocol_hash=request.service_protocol_hash
         )
-        return {
-            "status": "success",
-            "message": f"Service event logged successfully for part ID {request.part_id_hex}.",
-            "tx_hash": tx_hash
-        }
+        return {"status": "success", "tx_hash": tx_hash}
     except PermissionError as pe:
         raise HTTPException(status_code=403, detail=str(pe))
     except ValueError as ve:
-        raise HTTPException(status_code=404, detail=str(ve))
+        if "does not exist" in str(ve):
+            raise HTTPException(status_code=404, detail=str(ve))
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Blockchain Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # === STATS ===
 
@@ -361,7 +359,7 @@ def get_stats():
         dict: A dictionary containing various statistics.
     """
     try:
-        stats = manager.get_system_stats()
+        stats = manager.get_system_statistics()
         return {"statistics": stats}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
