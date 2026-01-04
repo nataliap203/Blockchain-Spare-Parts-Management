@@ -193,7 +193,7 @@ def grant_role_for_tests(solo_accounts, contract_details, deployed_contract_addr
             contract_details['abi'],
             role_name_str,
             []
-        )['0']
+        )
 
         tx_id = send_transaction(
             deployed_contract_address,

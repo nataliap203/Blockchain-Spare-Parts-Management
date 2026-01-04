@@ -94,7 +94,7 @@ class MaritimeManager:
         try:
             role_bytes = call_contract(
                 self.contract_address, self.abi, f"ROLE_{role_name.upper()}", []
-            )['0']
+            )
             tx_id = send_transaction(
                 self.contract_address,
                 self.abi,
@@ -121,13 +121,13 @@ class MaritimeManager:
         try:
             role_bytes = call_contract(
                 self.contract_address, self.abi, f"ROLE_{role_name.upper()}", []
-            )['0']
+            )
             result = call_contract(
                 self.contract_address,
                 self.abi,
                 "roles",
                 [role_bytes, address_to_check]
-            )['0']
+            )
             return result
         except Exception as e:
             raise Exception(f"Failed to check role: {e}")
@@ -148,7 +148,7 @@ class MaritimeManager:
         try:
             role_bytes = call_contract(
                 self.contract_address, self.abi, f"ROLE_{role_name.upper()}", []
-            )['0']
+            )
             tx_id = send_transaction(
                 self.contract_address,
                 self.abi,
@@ -178,7 +178,7 @@ class MaritimeManager:
         part_id_bytes = bytes.fromhex(part_id[2:] if part_id.startswith("0x") else part_id)
         part_data = call_contract(
             self.contract_address, self.abi, "parts", [part_id_bytes]
-        )['0']
+        )
         exists = part_data[7]
         if exists:
             raise ValueError(f"Part with serial number {serial_number} is already registered by this OEM.")
@@ -210,7 +210,7 @@ class MaritimeManager:
         part_id_bytes = self._validate_part_id_format(part_id_hex)
         part_data = call_contract(
             self.contract_address, self.abi, "parts", [part_id_bytes]
-        )['0']
+        )
         exists = part_data[7]
         if not exists:
             raise ValueError(f"Part with ID {part_id_hex} does not exist in the registry.")
@@ -264,7 +264,7 @@ class MaritimeManager:
         try:
             part_id = call_contract(
                 self.contract_address, self.abi, "getPartId", [manufacturer_address, serial_number]
-            )['0']
+            )
             return '0x' + part_id.hex()
         except Exception as e:
             if "AddressEncoder" in str(e) or "cannot be encoded" in str(e):
@@ -278,7 +278,7 @@ class MaritimeManager:
 
             part_data = call_contract(
                 self.contract_address, self.abi, "parts", [part_id_bytes]
-            )['0']
+            )
             if isinstance(part_data, dict):
                 part_data = [part_data[str(i)] for i in range(len(part_data))]
 
@@ -306,7 +306,7 @@ class MaritimeManager:
         try:
             raw_history = call_contract(
                 self.contract_address, self.abi, "getPartHistory", [part_id_bytes]
-            )['0']
+            )
             formatted_history = []
             for event in raw_history:
                 service_provider, service_timestamp, service_type, service_protocol_hash = event
@@ -327,7 +327,7 @@ class MaritimeManager:
         try:
             status = call_contract(
                 self.contract_address, self.abi, "checkWarrantyStatus", [part_id_bytes]
-            )['0']
+            )
         except Exception as e:
             if "part not registered" in str(e).lower() or "reverted" in str(e).lower():
                 raise ValueError("Part does not exist in the system.")
