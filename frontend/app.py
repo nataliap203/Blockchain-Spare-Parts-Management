@@ -157,31 +157,32 @@ with tab2:
         if not all([search_manufacturer, search_serial_number]):
             st.error("All fields are required.")
         else:
-            response = requests.get(f"{API_URL}/parts/{search_manufacturer}/{search_serial_number}")
-            if response.status_code == 200:
-                data = response.json().get("part_details", {})
-                st.json(data)
-                part_id = data.get("part_id")
+            with st.spinner("Searching for part..."):
+                response = requests.get(f"{API_URL}/parts/{search_manufacturer}/{search_serial_number}")
+                if response.status_code == 200:
+                    data = response.json().get("part_details", {})
+                    st.json(data)
+                    part_id = data.get("part_id")
 
-                if part_id:
-                    st.subheader("Service History")
-                    history_response = requests.get(f"{API_URL}/history/{part_id}")
-                    if history_response.status_code == 200:
-                        part_history = history_response.json().get("part_history", [])
-                        if part_history is None or len(part_history) == 0:
-                            st.info("No service history found for this part.")
+                    if part_id:
+                        st.subheader("Service History")
+                        history_response = requests.get(f"{API_URL}/history/{part_id}")
+                        if history_response.status_code == 200:
+                            part_history = history_response.json().get("part_history", [])
+                            if part_history is None or len(part_history) == 0:
+                                st.info("No service history found for this part.")
+                            else:
+                                st.table(part_history)
                         else:
-                            st.table(part_history)
-                    else:
-                        st.error(f"Failed to fetch part history: {history_response.json().get('detail', 'Unknown error')}")
-            elif response.status_code == 404:
-                st.warning("Part not found. Please check the Manufacturer Address and Serial Number.")
-            else:
-                try:
-                    error_detail = response.json().get("detail", "Unknown error occurred")
-                except Exception:
-                    error_detail = response.text
-                st.error(f"Part not found: {error_detail}")
+                            st.error(f"Failed to fetch part history: {history_response.json().get('detail', 'Unknown error')}")
+                elif response.status_code == 404:
+                    st.warning("Part not found. Please check the Manufacturer Address and Serial Number.")
+                else:
+                    try:
+                        error_detail = response.json().get("detail", "Unknown error occurred")
+                    except Exception:
+                        error_detail = response.text
+                    st.error(f"Part not found: {error_detail}")
 
 # --- Tab 3: Log Service Event (Auth required) ---
 with tab3:
@@ -223,29 +224,31 @@ with tab4:
         if not warranty_part_id:
             st.error("Please enter a Part ID.")
         else:
-            response = requests.get(f"{API_URL}/warranty/{warranty_part_id}")
-            if response.status_code == 200:
-                data = response.json()
-                is_valid = data.get("is_valid")
-                color = "green" if is_valid else "red"
-                st.markdown(f"Status: :{color}[{'Valid' if is_valid else 'Expired'}]")
-                st.write(f"Days Left: {data.get('days_left')}")
-            else:
-                st.error(f"Failed to check warranty: {response.json().get('detail', 'Unknown error')}")
+            with st.spinner("Checking warranty status..."):
+                response = requests.get(f"{API_URL}/warranty/{warranty_part_id}")
+                if response.status_code == 200:
+                    data = response.json()
+                    is_valid = data.get("is_valid")
+                    color = "green" if is_valid else "red"
+                    st.markdown(f"Status: :{color}[{'Valid' if is_valid else 'Expired'}]")
+                    st.write(f"Days Left: {data.get('days_left')}")
+                else:
+                    st.error(f"Failed to check warranty: {response.json().get('detail', 'Unknown error')}")
 
 # --- Tab 5: All Registered Spare Parts (Public/Read-Only) ---
 with tab5:
     st.header("All Registered Spare Parts")
     if st.button("Refresh List"):
-        parts_response = requests.get(f"{API_URL}/parts")
-        if parts_response.status_code == 200:
-            parts = parts_response.json().get("parts", [])
-            if len(parts) == 0:
-                st.info("No parts registered yet.")
+        with st.spinner("Fetching all parts..."):
+            parts_response = requests.get(f"{API_URL}/parts")
+            if parts_response.status_code == 200:
+                parts = parts_response.json().get("parts", [])
+                if len(parts) == 0:
+                    st.info("No parts registered yet.")
+                else:
+                    st.dataframe(parts)
             else:
-                st.dataframe(parts)
-        else:
-            st.error(f"Failed to fetch parts: {parts_response.status_code}")
+                st.error(f"Failed to fetch parts: {parts_response.status_code}")
 
 # -- Tab 6: Role Management (Auth and OPERATOR role required) / Check Role (Public/Read-Only) ---
 with tab6:
