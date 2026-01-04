@@ -41,7 +41,9 @@ class MaritimeManager:
             raise ValueError(f"Invalid address format: {address}")
 
     def _validate_part_id_format(self, part_id_hex: str) -> bytes:
-        clean_hex = part_id_hex.strip().lower().replace("0x", "")
+        clean_hex = part_id_hex.strip().lower()
+        clean_hex = clean_hex[2:] if clean_hex.startswith("0x") else clean_hex
+
         try:
             int(clean_hex, 16)
         except ValueError:
@@ -274,7 +276,7 @@ class MaritimeManager:
     def get_part_details(self, manufacturer_address: str, serial_number: str) -> Dict[str, Any]:
         try:
             part_id_hex = self.get_part_id(manufacturer_address, serial_number)
-            part_id_bytes = bytes.fromhex(part_id_hex.replace("0x", ""))
+            part_id_bytes = bytes.fromhex(part_id_hex[2:] if part_id_hex.startswith("0x") else part_id_hex)
 
             part_data = call_contract(
                 self.contract_address, self.abi, "parts", [part_id_bytes]
