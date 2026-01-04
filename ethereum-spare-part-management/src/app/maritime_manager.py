@@ -48,7 +48,9 @@ class MaritimeManager:
         return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M")
 
     def _validate_part_id_format(self, part_id_hex: str) -> bytes:
-        clean_hex = part_id_hex.strip().lower().replace("0x", "")
+        clean_hex = part_id_hex.strip().lower()
+        clean_hex = clean_hex[2:] if clean_hex.startswith("0x") else clean_hex
+
         try:
             int(clean_hex, 16)
         except ValueError:
@@ -218,7 +220,7 @@ class MaritimeManager:
             raise PermissionError(f"Account {sender_address} lacks OEM role required to register parts.")
 
         part_id_hex = self.get_part_id(sender_address, serial_number)
-        part_id_bytes = bytes.fromhex(part_id_hex.replace("0x", ""))
+        part_id_bytes = bytes.fromhex(part_id_hex[2:] if part_id_hex.startswith("0x") else part_id_hex)
         part_data = self.contract.functions.parts(part_id_bytes).call()
         exists = part_data[7]
         if exists:  # exists flag
@@ -274,7 +276,7 @@ class MaritimeManager:
 
         try:
             part_id_bytes = self.contract.functions.getPartId(manufacturer_address, serial_number).call()
-            return part_id_bytes.hex()
+            return "0x" + part_id_bytes.hex()
         except Exception as e:
             raise Exception(f"Failed to get part ID: {str(e)}")
 
@@ -288,7 +290,7 @@ class MaritimeManager:
             for log in logs:
                 args = log['args']
                 all_parts.append({
-                    "part_id": '0x' + args.partId.hex(),
+                    "part_id": "0x" + args.partId.hex(),
                     "part_name": args.partName,
                     "manufacturer": args.manufacturer,
                     "serial_number": args.serialNumber,
@@ -301,7 +303,7 @@ class MaritimeManager:
     def get_part_details(self, manufacturer_address: str, serial_number: str):
         try:
             part_id_hex = self.get_part_id(manufacturer_address, serial_number)
-            part_data = self.contract.functions.parts(bytes.fromhex(part_id_hex.replace("0x", ""))).call()
+            part_data = self.contract.functions.parts(bytes.fromhex(part_id_hex[2:] if part_id_hex.startswith("0x") else part_id_hex)).call()
 
             if part_data[7] is False:  # exists flag
                 return None
