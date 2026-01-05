@@ -6,7 +6,7 @@ from thor_devkit import cry, transaction, abi
 from web3._utils.abi import get_abi_output_types
 from eth_abi import decode_abi
 
-NODE_URL = os.getenv("NODE_URL", "https://testnet.vechain.org")
+NODE_URL = os.getenv("HOST_ADDRESS", "https://testnet.vechain.org")
 CHAIN_TAG = int('0x27', 16)  # Testnet chain tag for VeChain
 
 def get_best_block_ref():

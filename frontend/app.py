@@ -1,7 +1,9 @@
+import os
 import streamlit as st
 import requests
 
-API_URL = "http://localhost:8000"
+ETH_API_URL = os.getenv("ETH_API_URL", "http://localhost:8000")
+VET_API_URL = os.getenv("VET_API_URL", "http://localhost:8001")
 
 st.set_page_config(page_title="Spare Part Management", layout="wide")
 
@@ -26,18 +28,34 @@ def logout():
 
 # === Sidebar: Authentication ===
 with st.sidebar:
-    st.title("User Authentication")
+    st.title("System Settings")
+
+    network_choice = st.radio(
+        "Select Blockchain Network",
+        ("Ethereum (Anvil)", "VeChain (Testnet)"),
+        index=0
+    )
+
+    if network_choice == "Ethereum (Anvil)":
+        API_URL = ETH_API_URL
+        st.session_state["network_name"] = "Ethereum"
+    else:
+        API_URL = VET_API_URL
+        st.session_state["network_name"] = "VeChain"
+
+    st.divider()
     try:
         api_status = requests.get(f"{API_URL}/")
         if api_status.status_code == 200:
             backend_info = api_status.json()
-            st.success(f"Connected to {backend_info.get('network')} API")
+            st.success(f"Connected to {backend_info.get('network_name')} API")
         else:
-            st.error("Failed to connect to Blockchain API")
+            st.error(f"Failed to connect to {st.session_state['network_name']} API")
     except Exception:
-        st.error("Blockchain API is not running")
+        st.error(f"{st.session_state['network_name']} Blockchain API is not running")
         st.stop()
 
+    st.title("User Authentication")
     if not st.session_state["token"]:
         auth_mode = st.radio("Select Action", ["Login", "Register"])
         if auth_mode == "Login":

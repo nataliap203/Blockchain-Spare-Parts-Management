@@ -7,8 +7,10 @@ from typing import List, Dict, Any
 from src.app.utils.vechain_utils import send_transaction, call_contract, wait_for_receipt, fetch_events, private_key_to_address
 from src.app.utils.transfer import transfer_vtho
 
+CONFIG_FILE = os.getenv("DEPLOYMENT_OUTPUT_FILE", "./deployment_details.json")
+
 class MaritimeManager:
-    def __init__(self, config_file: str = "deployment_details.json"):
+    def __init__(self, config_file: str = CONFIG_FILE):
         self.SYSTEM_ROLES = ["OPERATOR", "OEM", "SERVICE"]
 
         if not os.path.exists(config_file):
@@ -199,7 +201,7 @@ class MaritimeManager:
 
             return tx_id
         except Exception as e:
-            raise f"Failed to register part: {str(e)}"
+            raise Exception(f"Failed to register part: {str(e)}")
 
     def log_service_event(self, sender_pk: str, part_id_hex: str, service_type: str, service_protocol_hash: str) -> str:
         sender_address = private_key_to_address(sender_pk)

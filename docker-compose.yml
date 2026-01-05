@@ -1,0 +1,53 @@
+services:
+  ethereum-backend:
+    build:
+      context: ./ethereum-backend
+    container_name: maritime-ethereum-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ethereum-backend/data:/app/data
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - MASTER_ENCRYPTION_KEY=${MASTER_ENCRYPTION_KEY}
+      - OPERATOR_PRIVATE_KEY=${ETH_OPERATOR_PRIVATE_KEY}
+      - DEPLOYMENT_OUTPUT_FILE=${ETH_CONTRACT_DETAILS_FILE}
+      - HOST_ADDRESS=${ETH_RPC_URL}
+      - DATABASE_URL=${ETH_DATABASE_URL}
+      - ADMIN_EMAIL=${ETH_ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ETH_ADMIN_PASSWORD}
+
+  vechain-backend:
+    build:
+      context: ./vechain-backend
+    container_name: maritime-vechain-backend
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./vechain-backend/data:/app/data
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - MASTER_ENCRYPTION_KEY=${MASTER_ENCRYPTION_KEY}
+      - OPERATOR_PRIVATE_KEY=${VECHAIN_OPERATOR_PRIVATE_KEY}
+      - HOST_ADDRESS=${VECHAIN_RPC_URL}
+      - DEPLOYMENT_OUTPUT_FILE=${VECHAIN_CONTRACT_DETAILS_FILE}
+      - DATABASE_URL=${VECHAIN_DATABASE_URL}
+      - ADMIN_EMAIL=${VECHAIN_ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${VECHAIN_ADMIN_PASSWORD}
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: maritime-frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - ETH_API_URL=${ETH_API_URL}
+      - VET_API_URL=${VET_API_URL}
+    depends_on:
+      - ethereum-backend
+      - vechain-backend
+
+networks:
+  default:
+    driver: bridge

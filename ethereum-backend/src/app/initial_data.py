@@ -6,8 +6,8 @@ from src.app.utils import private_key_to_address
 
 def create_initial_data(session: Session) -> None:
     operator_key = os.getenv("OPERATOR_PRIVATE_KEY")
-    admin_email = os.getenv("ADMIN_EMAIL", "admin@maritime.com")
-    admin_password = os.getenv("ADMIN_PASSWORD", "adminpass")
+    admin_email = os.getenv("ADMIN_EMAIL")
+    admin_password = os.getenv("ADMIN_PASSWORD")
 
     if not operator_key:
         print("No OPERATOR_PRIVATE_KEY found in environment variables. Skipping initial data creation.")

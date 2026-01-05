@@ -64,7 +64,7 @@ def read_root():
     Returns:
         dict: Status message and backend information.
     """
-    return {"status": "Blockchain API is running.", "network": "Ethereum"}
+    return {"status": "Blockchain API is running.", "network_name": "Ethereum"}
 
 
 # === REGISTRATION AND AUTHENTICATION ===

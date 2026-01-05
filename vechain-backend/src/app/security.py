@@ -8,11 +8,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY", "super_secret")
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 # Token expiry time
 
-MASTER_ENCRYPTION_KEY = os.getenv("MASTER_ENCRYPTION_KEY", "default_master_key_please_change")
+MASTER_ENCRYPTION_KEY = os.getenv("MASTER_ENCRYPTION_KEY")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 cipher_suite = Fernet(MASTER_ENCRYPTION_KEY.encode())
