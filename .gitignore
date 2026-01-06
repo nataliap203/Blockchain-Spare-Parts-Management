@@ -211,3 +211,4 @@ deployment_details.json
 .DS_Store
 uv.lock
 __local__.json
+data/
