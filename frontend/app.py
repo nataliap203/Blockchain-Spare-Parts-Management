@@ -96,13 +96,14 @@ with st.sidebar:
                     else:
                         try:
                             payload = {"email": reg_email, "password": reg_password}
-                            response = requests.post(f"{API_URL}/register", json=payload)
-                            if response.status_code == 200:
-                                data = response.json()
-                                st.success("Account created successfully! Please log in.")
-                                st.info(f"Your wallet address: {data.get('wallet_address')}")
-                            else:
-                                st.error(response.json().get("detail", "Registration failed"))
+                            with st.spinner("Registering account..."):
+                                response = requests.post(f"{API_URL}/register", json=payload)
+                                if response.status_code == 200:
+                                    data = response.json()
+                                    st.success("Account created successfully! Please log in.")
+                                    st.info(f"Your wallet address: {data.get('wallet_address')}")
+                                else:
+                                    st.error(response.json().get("detail", "Registration failed"))
                         except Exception as e:
                             st.error(f"Error during registration: {e}")
     else:
