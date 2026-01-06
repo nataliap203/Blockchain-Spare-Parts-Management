@@ -7,19 +7,30 @@ from typing import List, Dict, Any
 from src.app.utils.vechain_utils import send_transaction, call_contract, wait_for_receipt, fetch_events, private_key_to_address
 from src.app.utils.transfer import transfer_vtho
 
-CONFIG_FILE = os.getenv("DEPLOYMENT_OUTPUT_FILE", "./deployment_details.json")
+CONFIG_FILE = os.getenv("DEPLOYMENT_OUTPUT_FILE", "data/deployment_details.json")
 
 class MaritimeManager:
     def __init__(self, config_file: str = CONFIG_FILE):
         self.SYSTEM_ROLES = ["OPERATOR", "OEM", "SERVICE"]
 
-        if not os.path.exists(config_file):
-            raise FileNotFoundError(f"Configuration file {config_file} not found.")
-        with open(config_file, 'r') as file:
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        if not os.path.isabs(config_file):
+            full_path = os.path.join(base_dir, config_file)
+        else:
+            full_path = config_file
+
+        if not os.path.exists(full_path):
+            if os.path.exists("deployment_details.json"):
+                full_path = "deployment_details.json"
+            else:
+                raise FileNotFoundError(f"Configuration file at {full_path} not found.")
+        with open(full_path, 'r') as file:
             details = json.load(file)
 
         self.contract_address = details["address"]
         self.abi = details["abi"]
+        self.connected_network = details["network"]
+        
         print(f"MaritimeManager initialized with contract at {self.contract_address}")
 
     def _format_date(self, timestamp: int) -> str:

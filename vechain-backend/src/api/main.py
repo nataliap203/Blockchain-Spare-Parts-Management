@@ -49,7 +49,11 @@ def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Dep
 
 @app.get("/")
 def root():
-    return {"status": "VeChain Spare Part Management API is running.", "network_name": "VeChain Testnet"}
+    if manager is None:
+        return {"status": "VeChain Spare Part Management API is starting up. Manager not initialized yet.", "service": ""}
+
+    network_name = manager.connected_network if manager.connected_network else "Unknown"
+    return {"status": "VeChain Spare Part Management API is running.", "service": "VeChain", "network_name": network_name}
 
 # === REGISTRATION AND AUTHENTICATION ===
 
