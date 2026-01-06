@@ -12,6 +12,7 @@ dependencies = [
     "anvil>=0.0.2",
     "ape-alchemy>=0.8.10",
     "ape-foundry>=0.8.10",
+    "ape-infura>=0.8.4",
     "ape-solidity>=0.8.5",
     "bcrypt==3.2.0",
     "cryptography>=46.0.3",
