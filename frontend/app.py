@@ -32,27 +32,29 @@ with st.sidebar:
 
     network_choice = st.radio(
         "Select Blockchain Network",
-        ("Ethereum (Anvil)", "VeChain (Testnet)"),
+        ("Ethereum", "VeChain"),
         index=0
     )
 
-    if network_choice == "Ethereum (Anvil)":
+    if network_choice == "Ethereum":
         API_URL = ETH_API_URL
-        st.session_state["network_name"] = "Ethereum"
+        st.session_state["service"] = "Ethereum"
     else:
         API_URL = VET_API_URL
-        st.session_state["network_name"] = "VeChain"
+        st.session_state["service"] = "VeChain"
 
     st.divider()
     try:
         api_status = requests.get(f"{API_URL}/")
         if api_status.status_code == 200:
             backend_info = api_status.json()
-            st.success(f"Connected to {backend_info.get('network_name')} API")
+            network_name = backend_info.get("network_name", "Unknown Network")
+            service_name = backend_info.get("service", "Backend API")
+            st.success(f"Connected to {service_name} - {network_name} API")
         else:
-            st.error(f"Failed to connect to {st.session_state['network_name']} API")
+            st.error(f"Failed to connect to {st.session_state['service']} API")
     except Exception:
-        st.error(f"{st.session_state['network_name']} Blockchain API is not running")
+        st.error(f"{st.session_state['service']} Blockchain API is not running")
         st.stop()
 
     st.title("User Authentication")
@@ -63,38 +65,46 @@ with st.sidebar:
                 email = st.text_input("Email", key="login_email")
                 password = st.text_input("Password", type="password", key="login_password")
                 submitted = st.form_submit_button("Log in")
+
                 if submitted:
-                    try:
-                        payload = {"username": email, "password": password}
-                        response = requests.post(f"{API_URL}/token", data=payload)
-                        if response.status_code == 200:
-                            data = response.json()
-                            st.session_state["token"] = data["access_token"]
-                            st.session_state["user_role"] = data["role"]
-                            st.session_state["wallet_address"] = data["address"]
-                            st.toast("Logged in successfully!", icon="✅")
-                            st.rerun()
-                        else:
-                            st.error(response.json().get("detail", "Login failed"))
-                    except Exception as e:
-                        st.error(f"Error during login: {e}")
+                    if not email or not password:
+                        st.warning("Please enter both email and password.")
+                    else:
+                        try:
+                            payload = {"username": email, "password": password}
+                            response = requests.post(f"{API_URL}/token", data=payload)
+                            if response.status_code == 200:
+                                data = response.json()
+                                st.session_state["token"] = data["access_token"]
+                                st.session_state["user_role"] = data["role"]
+                                st.session_state["wallet_address"] = data["address"]
+                                st.toast("Logged in successfully!", icon="✅")
+                                st.rerun()
+                            else:
+                                st.error(response.json().get("detail", "Login failed"))
+                        except Exception as e:
+                            st.error(f"Error during login: {e}")
         elif auth_mode == "Register":
             with st.form("register_form"):
                 reg_email = st.text_input("Email", key="register_email")
                 reg_password = st.text_input("Password", type="password", key="register_password")
                 submitted = st.form_submit_button("Register")
+
                 if submitted:
-                    try:
-                        payload = {"email": reg_email, "password": reg_password}
-                        response = requests.post(f"{API_URL}/register", json=payload)
-                        if response.status_code == 200:
-                            data = response.json()
-                            st.success("Account created successfully! Please log in.")
-                            st.info(f"Your wallet address: {data.get('wallet_address')}")
-                        else:
-                            st.error(response.json().get("detail", "Registration failed"))
-                    except Exception as e:
-                        st.error(f"Error during registration: {e}")
+                    if not reg_email or not reg_password:
+                        st.warning("Please enter both email and password.")
+                    else:
+                        try:
+                            payload = {"email": reg_email, "password": reg_password}
+                            response = requests.post(f"{API_URL}/register", json=payload)
+                            if response.status_code == 200:
+                                data = response.json()
+                                st.success("Account created successfully! Please log in.")
+                                st.info(f"Your wallet address: {data.get('wallet_address')}")
+                            else:
+                                st.error(response.json().get("detail", "Registration failed"))
+                        except Exception as e:
+                            st.error(f"Error during registration: {e}")
     else:
         st.info(f"Logged in as: {st.session_state['user_role']}")
         st.code(f"Your wallet address: {st.session_state['wallet_address']}", language="text")

@@ -28,6 +28,8 @@ class MaritimeManager:
         self.contract_address = config["address"]
         self.abi = config["abi"]
 
+        self.connected_network = config["network"]
+
         try:
             self.contract = self.web3.eth.contract(address=self.contract_address, abi=self.abi)
         except Exception as e:
