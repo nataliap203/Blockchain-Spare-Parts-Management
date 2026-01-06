@@ -32,27 +32,29 @@ with st.sidebar:
 
     network_choice = st.radio(
         "Select Blockchain Network",
-        ("Ethereum (Anvil)", "VeChain (Testnet)"),
+        ("Ethereum", "VeChain"),
         index=0
     )
 
-    if network_choice == "Ethereum (Anvil)":
+    if network_choice == "Ethereum":
         API_URL = ETH_API_URL
-        st.session_state["network_name"] = "Ethereum"
+        st.session_state["service"] = "Ethereum"
     else:
         API_URL = VET_API_URL
-        st.session_state["network_name"] = "VeChain"
+        st.session_state["service"] = "VeChain"
 
     st.divider()
     try:
         api_status = requests.get(f"{API_URL}/")
         if api_status.status_code == 200:
             backend_info = api_status.json()
-            st.success(f"Connected to {backend_info.get('network_name')} API")
+            network_name = backend_info.get("network_name", "Unknown Network")
+            service_name = backend_info.get("service", "Backend API")
+            st.success(f"Connected to {service_name} - {network_name} API")
         else:
-            st.error(f"Failed to connect to {st.session_state['network_name']} API")
+            st.error(f"Failed to connect to {st.session_state['service']} API")
     except Exception:
-        st.error(f"{st.session_state['network_name']} Blockchain API is not running")
+        st.error(f"{st.session_state['service']} Blockchain API is not running")
         st.stop()
 
     st.title("User Authentication")

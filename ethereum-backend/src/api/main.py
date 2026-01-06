@@ -64,7 +64,19 @@ def read_root():
     Returns:
         dict: Status message and backend information.
     """
-    return {"status": "Blockchain API is running.", "network_name": "Ethereum"}
+    if manager is None:
+        return {"status": "Blockchain API is running, but manager is not initialized.", "service": "Ethereum", "active_network": "N/A"}
+
+    raw_network = manager.connected_network
+    readable_network = raw_network
+
+    if "local" in raw_network or "anvil" in raw_network:
+        readable_network = "Anvil (Local)"
+    elif "sepolia" in raw_network:
+        readable_network = "Sepolia (Testnet)"
+
+
+    return {"status": "Blockchain API is running.", "service": "Ethereumm", "network_name": readable_network}
 
 
 # === REGISTRATION AND AUTHENTICATION ===
