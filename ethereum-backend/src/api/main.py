@@ -108,7 +108,7 @@ def register(user_data: UserCreateRequest, session: Session = Depends(get_sessio
     session.commit()
 
     try:
-        amount_ether = 1.0
+        amount_ether = 0.2
         manager.fund_account(wallet_address, amount_ether)
         if manager:
             print(f"Funded new account {wallet_address} with {amount_ether} ETH")
@@ -313,7 +313,10 @@ def register_part(request: RegisterPartRequest, current_user: User = Depends(get
             vessel_id=request.vessel_id,
             certificate_hash=request.certificate_hash
         )
-        part_id = manager.contract.functions.getPartId(sender_account.address, request.serial_number).call().hex()
+        part_id = manager.get_part_id(
+            manufacturer=sender_account.address,
+            serial_number=request.serial_number
+        )
         return {"status": "success", "tx_hash": tx_hash, "part_id": part_id}
     except PermissionError as pe:
         raise HTTPException(status_code=403, detail=str(pe))
