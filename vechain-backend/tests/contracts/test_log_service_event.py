@@ -29,7 +29,7 @@ def test_service_event_logging_service(grant_role_for_tests, solo_accounts, cont
         contract_details['abi'],
         "getPartId",
         [oem_addr, serial_number]
-    )['0']
+    )
 
     tx_log_id = send_transaction(
         deployed_contract_address,
@@ -47,7 +47,7 @@ def test_service_event_logging_service(grant_role_for_tests, solo_accounts, cont
         contract_details['abi'],
         "getPartHistory",
         [part_id]
-    )['0']
+    )
     first_event = part_history[0]
     assert first_event[0] == '0x' + service_addr.hex() # service provider
     assert first_event[2] == "Routine Maintenance" # sevice type
@@ -76,7 +76,7 @@ def test_service_event_logging_operator(grant_role_for_tests, solo_accounts, con
         contract_details['abi'],
         "getPartId",
         [oem_addr, serial_number]
-    )['0']
+    )
 
     tx_log_id = send_transaction(
         deployed_contract_address,
@@ -94,7 +94,7 @@ def test_service_event_logging_operator(grant_role_for_tests, solo_accounts, con
         contract_details['abi'],
         "getPartHistory",
         [part_id]
-    )['0']
+    )
     first_event = part_history[0]
     assert first_event[0] == '0x' + operator_addr.hex() # service provider
     assert first_event[2] == "Operator Logged Service" # sevice type
@@ -120,7 +120,7 @@ def test_service_event_logging_oem(grant_role_for_tests, solo_accounts, contract
         contract_details['abi'],
         "getPartId",
         [oem_addr, serial_number]
-    )['0']
+    )
 
     tx_log_id = send_transaction(
         deployed_contract_address,
@@ -196,9 +196,9 @@ def test_service_event_logging_history(grant_role_for_tests, solo_accounts, cont
     assert receipt2 is not None and receipt2.get('reverted') is False
     assert receipt3 is not None and receipt3.get('reverted') is False
 
-    part1_id = call_contract( deployed_contract_address, contract_details['abi'], "getPartId", [oem_addr, serial_number_1])['0']
-    part2_id = call_contract( deployed_contract_address, contract_details['abi'], "getPartId", [oem_addr, serial_number_2])['0']
-    part3_id = call_contract(deployed_contract_address, contract_details['abi'], "getPartId", [oem_addr, serial_number_3])['0']
+    part1_id = call_contract( deployed_contract_address, contract_details['abi'], "getPartId", [oem_addr, serial_number_1])
+    part2_id = call_contract( deployed_contract_address, contract_details['abi'], "getPartId", [oem_addr, serial_number_2])
+    part3_id = call_contract(deployed_contract_address, contract_details['abi'], "getPartId", [oem_addr, serial_number_3])
 
     for i, part_id in enumerate([part1_id, part2_id, part3_id], start=1):
         tx_log_id = send_transaction(
@@ -217,7 +217,7 @@ def test_service_event_logging_history(grant_role_for_tests, solo_accounts, cont
             contract_details['abi'],
             "getPartHistory",
             [part_id]
-        )['0']
+        )
         first_event = part_history[0]
         assert first_event[0] == '0x' + service_addr.hex() # service provider
         assert first_event[2] == f"Service Event {i}" # sevice type
@@ -248,7 +248,7 @@ def test_service_event_logging_chronological_order(grant_role_for_tests, solo_ac
         contract_details['abi'],
         "getPartId",
         [oem_addr, serial_number]
-    )['0']
+    )
 
     for i in range(3):
         tx_log_id = send_transaction(
@@ -267,7 +267,7 @@ def test_service_event_logging_chronological_order(grant_role_for_tests, solo_ac
         contract_details['abi'],
         "getPartHistory",
         [part_id]
-    )['0']
+    )
 
     for i in range(3):
         event = part_history[i]

@@ -15,14 +15,14 @@ def test_operator_grants_role(solo_accounts, contract_details, deployed_contract
         contract_details['abi'],
         "ROLE_OEM",
         []
-    )['0']
+    )
 
     role_service = call_contract(
         deployed_contract_address,
         contract_details['abi'],
         "ROLE_SERVICE",
         []
-    )['0']
+    )
 
     tx_oem_id = send_transaction(
         deployed_contract_address,
@@ -53,7 +53,7 @@ def test_operator_grants_role(solo_accounts, contract_details, deployed_contract
         "roles",
         [role_oem, oem_addr]
     )
-    assert is_oem_granted['0'] is True
+    assert is_oem_granted is True
 
     is_service_granted = call_contract(
         deployed_contract_address,
@@ -61,7 +61,7 @@ def test_operator_grants_role(solo_accounts, contract_details, deployed_contract
         "roles",
         [role_service, service_addr]
     )
-    assert is_service_granted['0'] is True
+    assert is_service_granted is True
 
 def test_operator_grants_roles_not_exists(solo_accounts, contract_details, deployed_contract_address):
     operator_pk = solo_accounts[0]["private_key"][2:]
@@ -90,7 +90,7 @@ def test_operator_grants_role_operator(solo_accounts, contract_details, deployed
         contract_details['abi'],
         "ROLE_OPERATOR",
         []
-    )['0']
+    )
 
     tx_id = send_transaction(
         deployed_contract_address,
@@ -110,7 +110,7 @@ def test_operator_grants_role_operator(solo_accounts, contract_details, deployed
         "roles",
         [role_operator, another_operator_addr]
     )
-    assert is_granted['0'] is True
+    assert is_granted is True
 
 def test_oem_grants_roles(solo_accounts, contract_details, deployed_contract_address):
     oem_pk = solo_accounts[1]["private_key"][2:]
@@ -121,7 +121,7 @@ def test_oem_grants_roles(solo_accounts, contract_details, deployed_contract_add
         contract_details['abi'],
         "ROLE_OEM",
         []
-    )['0']
+    )
 
     tx_id = send_transaction(
         deployed_contract_address,
@@ -144,7 +144,7 @@ def test_service_grants_roles(solo_accounts, contract_details, deployed_contract
         contract_details['abi'],
         "ROLE_SERVICE",
         []
-    )['0']
+    )
 
     tx_id = send_transaction(
         deployed_contract_address,
@@ -167,7 +167,7 @@ def test_unauthorized_grants_roles(solo_accounts, contract_details, deployed_con
         contract_details['abi'],
         "ROLE_OEM",
         []
-    )['0']
+    )
 
     tx_id = send_transaction(
         deployed_contract_address,
