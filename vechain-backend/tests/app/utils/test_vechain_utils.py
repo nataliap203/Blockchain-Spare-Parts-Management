@@ -5,8 +5,8 @@ import os
 from thor_devkit import abi
 from unittest.mock import MagicMock, patch, call
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src/app')))
-from utils.vechain_utils import get_best_block_ref, get_function_obj, call_contract, send_transaction, wait_for_receipt
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
+from src.app.utils.vechain_utils import get_best_block_ref, get_function_obj, call_contract, send_transaction, wait_for_receipt
 
 @pytest.fixture
 def sample_abi():
@@ -33,7 +33,7 @@ def sample_abi():
 
 # Tests for get_best_block_ref
 
-@patch('utils.vechain_utils.requests.get')
+@patch('src.app.utils.vechain_utils.requests.get')
 def test_get_best_block_ref(mock_get):
     fake_block_id = "0x0000000000123456000000000000000000000000000000000000000000000000"
 
@@ -87,7 +87,7 @@ def test_get_function_def_wrong_type():
 
 # Tests for call_contract
 
-@patch('utils.vechain_utils.requests.post')
+@patch('src.app.utils.vechain_utils.requests.post')
 def test_call_contract_success(mock_post, sample_abi):
     """Test successful call to a contract function."""
     encoded_value = '000000000000000000000000000000000000000000000000000000000000007b' # 123 in hex
@@ -102,7 +102,7 @@ def test_call_contract_success(mock_post, sample_abi):
     mock_post.return_value = mock_response
 
     result = call_contract("0xContractAddress", sample_abi, "getValue", [])
-    assert result['0'] == 123
+    assert result == 123
 
     args, kwargs = mock_post.call_args
     sent_payload = kwargs['json']
@@ -110,7 +110,7 @@ def test_call_contract_success(mock_post, sample_abi):
     assert sent_payload['clauses'][0]['to'] == "0xContractAddress"
     assert sent_payload['clauses'][0]['data'].startswith('0x')
 
-@patch('utils.vechain_utils.requests.post')
+@patch('src.app.utils.vechain_utils.requests.post')
 def test_call_contract_revert(mock_post, sample_abi):
     """Test contract call that results in a revert."""
     mock_response = MagicMock()
@@ -125,10 +125,11 @@ def test_call_contract_revert(mock_post, sample_abi):
     with pytest.raises(Exception) as excinfo:
         call_contract("0xContractAddress", sample_abi, "getValue", [])
 
-    assert "Revert: Some error" in str(excinfo.value)
+    assert "Contract Execution Reverted" in str(excinfo.value)
+    assert "Some error" in str(excinfo.value)
     mock_post.assert_called_once()
 
-@patch('utils.vechain_utils.requests.post')
+@patch('src.app.utils.vechain_utils.requests.post')
 def test_call_contract_failure(mock_post, sample_abi):
     """Test contract call that fails with non-200 status."""
     mock_response = MagicMock()
@@ -139,12 +140,12 @@ def test_call_contract_failure(mock_post, sample_abi):
     with pytest.raises(Exception) as excinfo:
         call_contract("0xContractAddress", sample_abi, "getValue", [])
 
-    assert "Contract call failed: Internal Server Error" in str(excinfo.value)
+    assert "Node connection failed: Internal Server Error" in str(excinfo.value)
     mock_post.assert_called_once()
 
 # Tests for send_transaction
-@patch('utils.vechain_utils.get_best_block_ref')
-@patch('utils.vechain_utils.requests.post')
+@patch('src.app.utils.vechain_utils.get_best_block_ref')
+@patch('src.app.utils.vechain_utils.requests.post')
 def test_send_transaction_success(mock_post, mock_block_ref, sample_abi):
     """Test successful sending of a transaction."""
     mock_block_ref.return_value = "0x0011223344556677"
@@ -172,8 +173,8 @@ def test_send_transaction_success(mock_post, mock_block_ref, sample_abi):
     assert "raw" in sent_payload
     assert sent_payload['raw'].startswith('0x')
 
-@patch('utils.vechain_utils.get_best_block_ref')
-@patch('utils.vechain_utils.requests.post')
+@patch('src.app.utils.vechain_utils.get_best_block_ref')
+@patch('src.app.utils.vechain_utils.requests.post')
 def test_send_transaction_failure(mock_post, mock_block_ref, sample_abi):
     """Test sending of a transaction that fails with non-200 status."""
     mock_block_ref.return_value = "0x0011223344556677"
@@ -199,8 +200,8 @@ def test_send_transaction_failure(mock_post, mock_block_ref, sample_abi):
 
 # Tests for wait_for_receipt
 
-@patch('utils.vechain_utils.time.sleep')
-@patch('utils.vechain_utils.requests.get')
+@patch('src.app.utils.vechain_utils.time.sleep')
+@patch('src.app.utils.vechain_utils.requests.get')
 def test_wait_for_receipt_success_immediate(mock_get, mock_sleep):
     """Test immediate successful retrieval of transaction receipt."""
     mock_response = MagicMock()
@@ -214,8 +215,8 @@ def test_wait_for_receipt_success_immediate(mock_get, mock_sleep):
     mock_sleep.assert_not_called()
 
 
-@patch('utils.vechain_utils.time.sleep')
-@patch('utils.vechain_utils.requests.get')
+@patch('src.app.utils.vechain_utils.time.sleep')
+@patch('src.app.utils.vechain_utils.requests.get')
 def test_wait_for_receipt_polling(mock_get, mock_sleep):
     """Test polling behavior until receipt is found."""
     pending_response = MagicMock()
@@ -232,8 +233,8 @@ def test_wait_for_receipt_polling(mock_get, mock_sleep):
     assert receipt['id'] == "0xTx"
     assert mock_sleep.call_count == 2
 
-@patch('utils.vechain_utils.time.sleep')
-@patch('utils.vechain_utils.requests.get')
+@patch('src.app.utils.vechain_utils.time.sleep')
+@patch('src.app.utils.vechain_utils.requests.get')
 def test_wait_for_receipt_reverted(mock_get, mock_sleep):
     """Test retrieval of a receipt that indicates a revert."""
     mock_response = MagicMock()
@@ -244,8 +245,8 @@ def test_wait_for_receipt_reverted(mock_get, mock_sleep):
         receipt = wait_for_receipt("0xTxHash")
     assert "Transaction reverted: Out of gas" in str(excinfo.value)
 
-@patch('utils.vechain_utils.time.sleep')
-@patch('utils.vechain_utils.requests.get')
+@patch('src.app.utils.vechain_utils.time.sleep')
+@patch('src.app.utils.vechain_utils.requests.get')
 def test_wait_for_receipt_timeout(mock_get, mock_sleep):
     """Test timeout behavior when receipt is not found."""
     mock_response = MagicMock()

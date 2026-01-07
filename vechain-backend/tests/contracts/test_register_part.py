@@ -29,7 +29,7 @@ def test_oem_registers_part(grant_role_for_tests, solo_accounts, contract_detail
         contract_details['abi'],
         "getPartId",
         [oem_addr, serial_number]
-    )['0']
+    )
 
     print(f"Part registered with ID: {part_id.hex()}")
 
@@ -38,7 +38,7 @@ def test_oem_registers_part(grant_role_for_tests, solo_accounts, contract_detail
         contract_details['abi'],
         "parts",
         [part_id]
-    )['0']
+    )
     assert saved_part[7] is True # exists
     assert saved_part[1] == '0x' + oem_addr.hex() # manufacturer
     assert saved_part[2] == serial_number # serial number
@@ -100,13 +100,13 @@ def test_same_serial_different_oem(grant_role_for_tests, solo_accounts, contract
         contract_details['abi'],
         "getPartId",
         [oem1_addr, serial_number]
-    )['0']
+    )
     part2_id = call_contract(
         deployed_contract_address,
         contract_details['abi'],
         "getPartId",
         [oem2_addr, serial_number]
-    )['0']
+    )
     assert part1_id != part2_id
 
 def test_service_registers_part_fails(grant_role_for_tests, solo_accounts, contract_details, deployed_contract_address):

@@ -36,7 +36,7 @@ def test_warranty_check(grant_role_for_tests, solo_accounts, contract_details, d
         contract_details['abi'],
         "checkWarrantyStatus",
         [part_id]
-    )['0']
+    )
     assert status_now[0] is True  # isValid
     assert status_now[1] > 0   # timeLeft
 
@@ -49,7 +49,7 @@ def test_warranty_check(grant_role_for_tests, solo_accounts, contract_details, d
         contract_details['abi'],
         "checkWarrantyStatus",
         [part_id]
-    )['0']
+    )
     assert status_later[0] is False  # isValid
     assert status_later[1] == 0      # timeLeft
 
@@ -74,14 +74,14 @@ def test_warranty_edge_case(grant_role_for_tests, solo_accounts, contract_detail
         contract_details['abi'],
         "getPartId",
         [oem_addr, serial_number]
-    )['0']
+    )
 
     status_immediate = call_contract(
         deployed_contract_address,
         contract_details['abi'],
         "checkWarrantyStatus",
         [part_id]
-    )['0']
+    )
     assert status_immediate[0] is True  # isValid
     assert status_immediate[1] > 0      # timeLeft
 
@@ -92,7 +92,7 @@ def test_warranty_edge_case(grant_role_for_tests, solo_accounts, contract_detail
         contract_details['abi'],
         "checkWarrantyStatus",
         [part_id]
-    )['0']
+    )
     assert status_post[0] is False  # isValid
     assert status_post[1] == 0      # timeLeft
 

@@ -19,14 +19,14 @@ def test_full_scenario(solo_accounts, contract_details, deployed_contract_addres
         contract_details['abi'],
         "ROLE_OEM",
         []
-    )['0']
+    )
 
     role_service = call_contract(
         deployed_contract_address,
         contract_details['abi'],
         "ROLE_SERVICE",
         []
-    )['0']
+    )
 
     tx_oem_id = send_transaction(
         deployed_contract_address,
@@ -53,14 +53,14 @@ def test_full_scenario(solo_accounts, contract_details, deployed_contract_addres
         "roles",
         [role_oem, oem_addr]
     )
-    assert is_oem_granted['0'] is True
+    assert is_oem_granted is True
 
     is_service_granted = call_contract(
         deployed_contract_address,
         contract_details['abi'],
         "roles",
         [role_service, service_addr]
-    )['0']
+    )
     assert is_service_granted is True
 
     # OEM registers a part
@@ -82,7 +82,7 @@ def test_full_scenario(solo_accounts, contract_details, deployed_contract_addres
         contract_details['abi'],
         "getPartId",
         [oem_addr, serial_number]
-    )['0']
+    )
 
     print(f"Part registered with ID: {part_id.hex()}")
 
@@ -91,7 +91,7 @@ def test_full_scenario(solo_accounts, contract_details, deployed_contract_addres
         contract_details['abi'],
         "parts",
         [part_id]
-    )['0']
+    )
     assert saved_part[7] is True # exists
     assert saved_part[1] == '0x' + oem_addr.hex() # manufacturer
     assert saved_part[2] == serial_number # serial number
@@ -115,6 +115,6 @@ def test_full_scenario(solo_accounts, contract_details, deployed_contract_addres
         contract_details['abi'],
         "partHistory",
         [part_id, 0]
-    )['0']
+    )
     assert part_history[0] == '0x' + service_addr.hex() # service provider
     assert part_history[2] == "Routine Check" # service type

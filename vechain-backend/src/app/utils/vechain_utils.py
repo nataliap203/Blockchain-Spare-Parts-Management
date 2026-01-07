@@ -95,7 +95,7 @@ def call_contract(contract_address, contract_abi, func_name, args):
         if revert_data.startswith('08c379a0'):  # Function selector for Error(string)
             try:
                 reason = decode_abi(['string'], bytes.fromhex(revert_data[8:]))[0] # Decode the revert reason after the selector
-                raise ValueError(f"Contract execution reverted: {reason}")
+                raise ValueError(f"Contract Execution Reverted: {reason}")
             except Exception:
                 raise Exception(f"Contract Execution Reverted (Raw): {result[0].get('vmError')}") # If decoding fails, raise raw error
         else:
