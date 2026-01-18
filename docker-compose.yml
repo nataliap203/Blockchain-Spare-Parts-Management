@@ -16,8 +16,10 @@ services:
       - DATABASE_URL=${ETH_DATABASE_URL}
       - ADMIN_EMAIL=${ETH_ADMIN_EMAIL}
       - ADMIN_PASSWORD=${ETH_ADMIN_PASSWORD}
+      - WEB3_INFURA_PROJECT_ID=${WEB3_INFURA_PROJECT_ID}
 
   vechain-backend:
+    platform: linux/amd64
     build:
       context: ./vechain-backend
     container_name: maritime-vechain-backend

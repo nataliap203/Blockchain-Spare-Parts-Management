@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv("../.env")
 NODE_URL = os.getenv("VECHAIN_RPC_URL", "https://testnet.vechain.org")
-DEPLOYER_PRIVATE_KEY_HEX = os.getenv("VECHAIN_OPERATOR_PRIVATE_KEY")
+DEPLOYER_PRIVATE_KEY_HEX = os.getenv("OPERATOR_PRIVATE_KEY")
 
 if not DEPLOYER_PRIVATE_KEY_HEX:
     raise ValueError("Missing VECHAIN_OPERATOR_PRIVATE_KEY in environment variables.")
@@ -21,6 +21,7 @@ CONTRACT_FILE = os.path.join(BASE_DIR, "contracts", "MaritimeLog.sol")
 
 CONTRACT_NAME = "MaritimeLog"
 SOLC_VERSION = "0.8.20"
+
 
 def deploy():
     print("Deploying MaritimeLog contract to VeChain...")
@@ -48,23 +49,17 @@ def deploy():
     print("Preparing deployment transaction...")
     block_response = requests.get(f"{NODE_URL}/blocks/best").json()
     best_block_id = block_response["id"]
-    block_ref = best_block_id[:18] # block_ref is first 8 bytes of best block ID
+    block_ref = best_block_id[:18]  # block_ref is first 8 bytes of best block ID
 
     tx_body = {
-        "chainTag": int('0x27', 16),  # Testnet chain tag for VeChain
+        "chainTag": int("0x27", 16),  # Testnet chain tag for VeChain
         "blockRef": block_ref,
         "expiration": 720,
-        "clauses": [
-            {
-                "to": None,
-                "value": 0,
-                "data": bytecode
-            }
-        ],
+        "clauses": [{"to": None, "value": 0, "data": bytecode}],
         "gasPriceCoef": 0,
         "gas": 3_000_000,
         "dependsOn": None,
-        "nonce": int(time.time())
+        "nonce": int(time.time()),
     }
 
     print("Signing transaction...")
@@ -77,10 +72,7 @@ def deploy():
     encoded_tx = "0x" + encoded_bytes.hex()
 
     print("Broadcasting transaction...")
-    response = requests.post(
-        f"{NODE_URL}/transactions",
-        json={"raw": encoded_tx}
-    )
+    response = requests.post(f"{NODE_URL}/transactions", json={"raw": encoded_tx})
 
     if response.status_code == 200:
         result = response.json()
@@ -89,7 +81,7 @@ def deploy():
         contract_address = None
 
         # Waiting for transaction receipt
-        for _ in range(20): # Try for up to ~60 seconds
+        for _ in range(20):  # Try for up to ~60 seconds
             time.sleep(3)
             receipt_response = requests.get(f"{NODE_URL}/transactions/{tx_id}/receipt")
             if receipt_response.status_code == 200 and receipt_response.json():
@@ -97,7 +89,7 @@ def deploy():
                 if receipt.get("reverted"):
                     raise Exception("Transaction reverted.")
 
-                contract_address = receipt['outputs'][0]['contractAddress']
+                contract_address = receipt["outputs"][0]["contractAddress"]
                 break
 
         if not contract_address:
@@ -109,7 +101,7 @@ def deploy():
             "address": contract_address,
             "abi": abi_json,
             "network": "VeChain Testnet",
-            "deployed_at": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+            "deployed_at": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
         }
 
         os.makedirs(DATA_DIR, exist_ok=True)
@@ -122,10 +114,6 @@ def deploy():
     else:
         print(f"Failed to send transaction: {response.text}")
 
+
 if __name__ == "__main__":
     deploy()
-
-
-
-
-

@@ -9,6 +9,7 @@ load_dotenv()
 
 OUTPUT_FILE = os.getenv("DEPLOYMENT_OUTPUT_FILE", "deployment_details.json")
 
+
 def main():
     print("Deploying MaritimeLog contract...")
 
@@ -30,7 +31,7 @@ def main():
 
     # Deployment on live networks
     else:
-        private_key = os.getenv("ETH_OPERATOR_PRIVATE_KEY")
+        private_key = os.getenv("OPERATOR_PRIVATE_KEY")
         if not private_key:
             raise EnvironmentError("Missing ETH_OPERATOR_PRIVATE_KEY environment variable in .env file.")
 
@@ -50,13 +51,15 @@ def main():
         print("Building and sending deployment transaction...")
         Contract = w3.eth.contract(abi=abi, bytecode=bytecode)
 
-        gas_estimate = Contract.constructor().estimate_gas({'from': deployer_address})
-        construct_txn = Contract.constructor().build_transaction({
-            'from': deployer_address,
-            'nonce': w3.eth.get_transaction_count(deployer_address),
-            'gas': int(gas_estimate * 1.1),
-            'gasPrice': w3.eth.gas_price,
-        })
+        gas_estimate = Contract.constructor().estimate_gas({"from": deployer_address})
+        construct_txn = Contract.constructor().build_transaction(
+            {
+                "from": deployer_address,
+                "nonce": w3.eth.get_transaction_count(deployer_address),
+                "gas": int(gas_estimate * 1.1),
+                "gasPrice": w3.eth.gas_price,
+            }
+        )
 
         signed_txn = w3.eth.account.sign_transaction(construct_txn, private_key=private_key)
         tx_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
@@ -67,17 +70,13 @@ def main():
         contract_address = tx_receipt.contractAddress
 
     print(f"MaritimeLog contract deployed at address: {contract_address}")
-    base_dir = Path.cwd()
-    data_dir = base_dir / "data"
-    data_dir.mkdir(exist_ok=True)
-    output_path = data_dir / OUTPUT_FILE
-
+    output_path = OUTPUT_FILE
 
     deployment_data = {
         "address": contract_address,
         "abi": [abi.model_dump() for abi in project.MaritimeLog.contract_type.abi],
         "network": active_network,
-        "deployer": deployer_address
+        "deployer": deployer_address,
     }
 
     with open(output_path, "w") as f:
