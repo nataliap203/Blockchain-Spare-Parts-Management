@@ -9,10 +9,21 @@ from src.app.maritime_manager import MaritimeManager
 from src.api.schemas import RegisterPartRequest, LogServiceEventRequest, RoleRequest, UserCreateRequest
 from src.app.database import get_session, init_db, engine
 from src.app.models import User
-from src.app.security import get_password_hash, verify_password, encrypt_private_key, create_access_token, decrypt_private_key, SECRET_KEY, ALGORITHM, jwt
+from src.app.security import (
+    get_password_hash,
+    verify_password,
+    encrypt_private_key,
+    create_access_token,
+    decrypt_private_key,
+    SECRET_KEY,
+    ALGORITHM,
+    jwt,
+)
 from src.app.initial_data import create_initial_data
 
 manager = None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -28,8 +39,10 @@ async def lifespan(app: FastAPI):
         manager = None
     yield
 
+
 app = FastAPI(title="Spare Part Management API - Ethereum", lifespan=lifespan)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
 
 def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)) -> User:
     try:
@@ -45,6 +58,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Dep
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
 
+
 def get_custodial_account(user: User) -> Account:
     try:
         private_key = decrypt_private_key(user.encrypted_private_key)
@@ -55,7 +69,9 @@ def get_custodial_account(user: User) -> Account:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Wallet decryption failed: {str(e)}")
 
+
 # === API ENDPOINTS ===
+
 
 @app.get("/")
 def read_root():
@@ -75,11 +91,11 @@ def read_root():
     elif "sepolia" in raw_network:
         readable_network = "Sepolia (Testnet)"
 
-
     return {"status": "Blockchain API is running.", "service": "Ethereumm", "network_name": readable_network}
 
 
 # === REGISTRATION AND AUTHENTICATION ===
+
 
 @app.post("/register")
 def register(user_data: UserCreateRequest, session: Session = Depends(get_session)):
@@ -100,9 +116,9 @@ def register(user_data: UserCreateRequest, session: Session = Depends(get_sessio
     new_user = User(
         email=email,
         hashed_password=hashed_password,
-        role="USER", # Role needs to be granted by OPERATOR
+        role="USER",  # Role needs to be granted by OPERATOR
         wallet_address=wallet_address,
-        encrypted_private_key=encrypted_pk
+        encrypted_private_key=encrypted_pk,
     )
     session.add(new_user)
     session.commit()
@@ -120,6 +136,7 @@ def register(user_data: UserCreateRequest, session: Session = Depends(get_sessio
     session.refresh(new_user)
     return {"status": "success", "email": email, "wallet_address": wallet_address}
 
+
 @app.post("/token")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
     """Authenticate user and provide JWT token."""
@@ -130,24 +147,20 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = D
     access_token = create_access_token(subject=user.email, role=user.role)
     return {"access_token": access_token, "token_type": "bearer", "role": user.role, "address": user.wallet_address}
 
+
 # === ACCOUNTS MANAGEMENT ===
 @app.get("/accounts")
 def get_accounts(session: Session = Depends(get_session)):
     users = session.exec(select(User)).all()
     return {"accounts": [user.wallet_address for user in users]}
 
+
 @app.post("/admin/grant-role")
 def grant_role(request: RoleRequest, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     try:
         sender_account = get_custodial_account(current_user)
-        tx_hash_str = manager.grant_role(
-            sender_account=sender_account,
-            role_name=request.role_name,
-            target_address=request.target_address
-        )
-        user_to_update = session.exec(
-            select(User).where(User.wallet_address == request.target_address)
-        ).first()
+        tx_hash_str = manager.grant_role(sender_account=sender_account, role_name=request.role_name, target_address=request.target_address)
+        user_to_update = session.exec(select(User).where(User.wallet_address == request.target_address)).first()
 
         if user_to_update:
             user_to_update.role = request.role_name.upper()
@@ -165,19 +178,14 @@ def grant_role(request: RoleRequest, current_user: User = Depends(get_current_us
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @app.post("/admin/revoke-role")
 def revoke_role(request: RoleRequest, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     try:
         sender_account = get_custodial_account(current_user)
-        tx_hash_str = manager.revoke_role(
-            sender_account=sender_account,
-            role_name=request.role_name,
-            target_address=request.target_address
-        )
+        tx_hash_str = manager.revoke_role(sender_account=sender_account, role_name=request.role_name, target_address=request.target_address)
 
-        user_to_update = session.exec(
-            select(User).where(User.wallet_address == request.target_address)
-        ).first()
+        user_to_update = session.exec(select(User).where(User.wallet_address == request.target_address)).first()
 
         if user_to_update:
             if user_to_update.role == request.role_name.upper():
@@ -195,6 +203,7 @@ def revoke_role(request: RoleRequest, current_user: User = Depends(get_current_u
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 
 @app.get("/admin/check-role/{address}/{role_name}")
 def check_role(address: str, role_name: str):
@@ -214,7 +223,9 @@ def check_role(address: str, role_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 # === PARTS MANAGEMENT ===
+
 
 @app.get("/parts")
 def get_all_parts():
@@ -228,6 +239,7 @@ def get_all_parts():
         return {"parts": parts}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/parts/{manufacturer}/{serial_number}")
 def get_part(manufacturer: str, serial_number: str):
@@ -252,6 +264,7 @@ def get_part(manufacturer: str, serial_number: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/history/{part_id_hex}")
 def get_part_history(part_id_hex: str):
     """Retrieve the service history of a specific part.
@@ -267,6 +280,7 @@ def get_part_history(part_id_hex: str):
         return {"part_history": part_history}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/warranty/{part_id_hex}")
 def check_warranty(part_id_hex: str):
@@ -284,7 +298,9 @@ def check_warranty(part_id_hex: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 # === PART REGISTRATION ===
+
 
 @app.post("/parts/register")
 def register_part(request: RegisterPartRequest, current_user: User = Depends(get_current_user)):
@@ -311,12 +327,9 @@ def register_part(request: RegisterPartRequest, current_user: User = Depends(get
             serial_number=request.serial_number,
             warranty_days=request.warranty_days,
             vessel_id=request.vessel_id,
-            certificate_hash=request.certificate_hash
+            certificate_hash=request.certificate_hash,
         )
-        part_id = manager.get_part_id(
-            manufacturer=sender_account.address,
-            serial_number=request.serial_number
-        )
+        part_id = manager.get_part_id(manufacturer_address=sender_account.address, serial_number=request.serial_number)
         return {"status": "success", "tx_hash": tx_hash, "part_id": part_id}
     except PermissionError as pe:
         raise HTTPException(status_code=403, detail=str(pe))
@@ -327,7 +340,9 @@ def register_part(request: RegisterPartRequest, current_user: User = Depends(get
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 # === SERVICE EVENT LOGGING ===
+
 
 @app.post("/log_service")
 def log_service_event(request: LogServiceEventRequest, current_user: User = Depends(get_current_user)):
@@ -352,7 +367,7 @@ def log_service_event(request: LogServiceEventRequest, current_user: User = Depe
             sender_account=sender_account,
             part_id_hex=request.part_id_hex,
             service_type=request.service_type,
-            service_protocol_hash=request.service_protocol_hash
+            service_protocol_hash=request.service_protocol_hash,
         )
         return {"status": "success", "tx_hash": tx_hash}
     except PermissionError as pe:
@@ -364,7 +379,9 @@ def log_service_event(request: LogServiceEventRequest, current_user: User = Depe
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 # === STATS ===
+
 
 @app.get("/statistics")
 def get_stats():

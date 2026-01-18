@@ -15,10 +15,12 @@ if "user_role" not in st.session_state:
 if "wallet_address" not in st.session_state:
     st.session_state["wallet_address"] = None
 
+
 def get_auth_headers():
     if st.session_state["token"]:
         return {"Authorization": f"Bearer {st.session_state['token']}"}
     return {}
+
 
 def logout():
     st.session_state["token"] = None
@@ -26,15 +28,12 @@ def logout():
     st.session_state["wallet_address"] = None
     st.rerun()
 
+
 # === Sidebar: Authentication ===
 with st.sidebar:
     st.title("System Settings")
 
-    network_choice = st.radio(
-        "Select Blockchain Network",
-        ("Ethereum", "VeChain"),
-        index=0
-    )
+    network_choice = st.radio("Select Blockchain Network", ("Ethereum", "VeChain"), index=0)
 
     if network_choice == "Ethereum":
         API_URL = ETH_API_URL
@@ -98,12 +97,12 @@ with st.sidebar:
                             payload = {"email": reg_email, "password": reg_password}
                             with st.spinner("Registering account..."):
                                 response = requests.post(f"{API_URL}/register", json=payload)
-                                if response.status_code == 200:
-                                    data = response.json()
-                                    st.success("Account created successfully! Please log in.")
-                                    st.info(f"Your wallet address: {data.get('wallet_address')}")
-                                else:
-                                    st.error(response.json().get("detail", "Registration failed"))
+                            if response.status_code == 200:
+                                data = response.json()
+                                st.success("Account created successfully! Please log in.")
+                                st.info(f"Your wallet address: {data.get('wallet_address')}")
+                            else:
+                                st.error(response.json().get("detail", "Registration failed"))
                         except Exception as e:
                             st.error(f"Error during registration: {e}")
     else:
@@ -121,15 +120,17 @@ try:
     stats_response = requests.get(f"{API_URL}/statistics").json()
     stats = stats_response["statistics"]
     col1, col2, col3 = st.columns(3)
-    col1.metric("Registered parts", stats.get('total_parts', 0))
-    col2.metric("Active warranties", stats.get('active_warranties', 0))
-    col3.metric("Expired warranties", stats.get('expired_warranties', 0))
+    col1.metric("Registered parts", stats.get("total_parts", 0))
+    col2.metric("Active warranties", stats.get("active_warranties", 0))
+    col3.metric("Expired warranties", stats.get("expired_warranties", 0))
 except Exception as e:
     st.warning(f"Cannot load statistics: {e}")
 
 # For logged users
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Register Part", "Search", "Log Service Event", "Warranty Check", "All Parts", "Role management"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+    ["Register Part", "Search", "Log Service Event", "Warranty Check", "All Parts", "Role management"]
+)
 
 # --- Tab 1: Register Part (Auth required) ---
 with tab1:
@@ -155,7 +156,7 @@ with tab1:
                     "serial_number": serial_number,
                     "warranty_days": warranty_days,
                     "vessel_id": vessel_id,
-                    "certificate_hash": certificate_hash
+                    "certificate_hash": certificate_hash,
                 }
                 with st.spinner("Registering part..."):
                     try:
@@ -233,7 +234,7 @@ with tab3:
                     "sender_address": st.session_state["wallet_address"],
                     "part_id_hex": service_part_id,
                     "service_type": service_type,
-                    "service_protocol_hash": service_protocol_hash
+                    "service_protocol_hash": service_protocol_hash,
                 }
                 with st.spinner("Logging service event..."):
                     response = requests.post(f"{API_URL}/log_service", json=payload, headers=get_auth_headers())
@@ -300,7 +301,7 @@ with tab6:
                         payload = {
                             "sender_address": st.session_state["wallet_address"],
                             "role_name": role_name,
-                            "target_address": target_address
+                            "target_address": target_address,
                         }
                         endpoint = "grant-role" if role_action == "Grant Role" else "revoke-role"
                         with st.spinner(f"{role_action} in progress..."):
@@ -310,7 +311,7 @@ with tab6:
                                 st.success(f"{role_action} {role_name} executed successfully!")
                                 st.caption(f"Transaction Hash: `{response.json().get('tx_hash')}`")
                             else:
-                                error_detail = response.json().get('detail', 'Unknown error')
+                                error_detail = response.json().get("detail", "Unknown error")
                                 if "missing role" in error_detail.lower():
                                     st.error("You do not have OPERATOR role to perform this action.")
                                 else:

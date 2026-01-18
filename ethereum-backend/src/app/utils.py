@@ -3,12 +3,6 @@ import time
 from eth_account import Account
 from web3 import Web3
 
-def mock_ipfs_hash(data: str) -> str:
-    """Generate a mock IPFS hash for the given data."""
-    raw_string = f"{data}-{time.time()}"
-    hash_object = hashlib.sha256(raw_string.encode())
-    return f"QmMock{hash_object.hexdigest()}"
-
 def private_key_to_address(private_key: str) -> str:
     """Derive the Ethereum address from a given private key."""
     if not private_key.startswith("0x"):

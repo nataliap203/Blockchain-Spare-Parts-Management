@@ -73,7 +73,7 @@ class MaritimeManager:
             str: Transaction hash of the sent transaction.
         """
         try:
-            # Anvil: Simplified for clarity; in production, handle gas, nonce, signing, etc.
+            # Anvil: Simplified for clarity; handle gas, nonce, signing, etc.
             if isinstance(account, str):
                 return contract_function.transact({'from': account})
 
@@ -88,7 +88,8 @@ class MaritimeManager:
                 tx_data = contract_function.build_transaction(tx_params)
                 signed_tx = account.sign_transaction(tx_data)
                 tx_hash = self.web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-                return tx_hash
+                receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+                return tx_hash, receipt
             else:
                 raise TypeError("Account must be a string address or a LocalAccount instance.")
         except Exception as e:
@@ -141,9 +142,7 @@ class MaritimeManager:
 
         try:
             func = self.contract.functions.grantRole(role_hash, target_address)
-            tx_hash = self._send_transaction(func, sender_account)
-
-            receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+            tx_hash, receipt = self._send_transaction(func, sender_account)
 
             if receipt['status'] != 1:
                 raise Exception("Transaction executed but reverted.")
@@ -204,9 +203,8 @@ class MaritimeManager:
 
         try:
             func = self.contract.functions.revokeRole(role_hash, target_address)
-            tx_hash = self._send_transaction(func, sender_account)
+            tx_hash, receipt = self._send_transaction(func, sender_account)
 
-            receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
             if receipt['status'] != 1:
                 raise Exception("Transaction executed but reverted.")
             return tx_hash.hex()
@@ -236,8 +234,7 @@ class MaritimeManager:
             certificate_hash,
         )
         try:
-            tx_hash = self._send_transaction(func, sender_account)
-            self.web3.eth.wait_for_transaction_receipt(tx_hash)
+            tx_hash, receipt = self._send_transaction(func, sender_account)
             return tx_hash.hex()
         except Exception as e:
             raise Exception(f"Failed to register part: {str(e)}")
@@ -260,8 +257,7 @@ class MaritimeManager:
             service_protocol_hash,
         )
         try:
-            tx_hash = self._send_transaction(func, sender_account)
-            self.web3.eth.wait_for_transaction_receipt(tx_hash)
+            tx_hash, receipt = self._send_transaction(func, sender_account)
             return tx_hash.hex()
         except Exception as e:
             raise Exception(f"Failed to log service event: {str(e)}")

@@ -77,7 +77,7 @@ def call_contract(contract_address, contract_abi, func_name, args):
             {
                 "to": contract_address,
                 "value": "0x0",
-                "data": '0x' + data.hex()
+                "data": ('0x' + data.hex()) if not data.startswith(b'0x') else data
             }
         ]
     }
