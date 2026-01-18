@@ -2,7 +2,7 @@
 
 Autor: Natalia Pieczko
 
-Repozytorium jest częścią pracy inżynierksiej.
+Repozytorium jest częścią pracy inżynierskiej.
 
 ## Instrukcja uruchomienia
 
@@ -21,3 +21,4 @@ docker-compose up --build
 uzyskać dostęp do aplikacji klienckiej.
 4. Aplikacja w lewym górnym rogu ekranu umożliwia wybór wersji systemu (Ethereum
 lub VeChain).
+
