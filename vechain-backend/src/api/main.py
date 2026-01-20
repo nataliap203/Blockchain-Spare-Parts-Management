@@ -1,4 +1,4 @@
-# VECHAIN SPARE PART MANAGEMENT API
+# VECHAIN SPARE PARTS MANAGEMENT API
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
         manager = None
     yield
 
-app = FastAPI(title="Spare Part Management API - VeChain", lifespan=lifespan)
+app = FastAPI(title="Spare Parts Management API - VeChain", lifespan=lifespan)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)) -> User:
@@ -50,10 +50,10 @@ def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Dep
 @app.get("/")
 def root():
     if manager is None:
-        return {"status": "VeChain Spare Part Management API is starting up. Manager not initialized yet.", "service": ""}
+        return {"status": "VeChain Spare Parts Management API is starting up. Manager not initialized yet.", "service": ""}
 
     network_name = manager.connected_network if manager.connected_network else "Unknown"
-    return {"status": "VeChain Spare Part Management API is running.", "service": "VeChain", "network_name": network_name}
+    return {"status": "VeChain Spare Parts Management API is running.", "service": "VeChain", "network_name": network_name}
 
 # === REGISTRATION AND AUTHENTICATION ===
 

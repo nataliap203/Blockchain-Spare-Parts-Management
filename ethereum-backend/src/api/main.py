@@ -1,4 +1,4 @@
-# ETHEREUM SPARE PART MANAGEMENT API
+# ETHEREUM SPARE PARTS MANAGEMENT API
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Spare Part Management API - Ethereum", lifespan=lifespan)
+app = FastAPI(title="Spare Parts Management API - Ethereum", lifespan=lifespan)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
@@ -385,7 +385,7 @@ def log_service_event(request: LogServiceEventRequest, current_user: User = Depe
 
 @app.get("/statistics")
 def get_stats():
-    """Retrieve basic statistics about the spare part management system.
+    """Retrieve basic statistics about the spare parts management system.
 
     Returns:
         dict: A dictionary containing various statistics.

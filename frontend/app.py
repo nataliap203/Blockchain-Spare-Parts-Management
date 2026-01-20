@@ -5,7 +5,7 @@ import requests
 ETH_API_URL = os.getenv("ETH_API_URL", "http://localhost:8000")
 VET_API_URL = os.getenv("VET_API_URL", "http://localhost:8001")
 
-st.set_page_config(page_title="Spare Part Management", layout="wide")
+st.set_page_config(page_title="Spare Parts Management", layout="wide")
 
 # === Session State Management ===
 if "token" not in st.session_state:
@@ -29,11 +29,18 @@ def logout():
     st.rerun()
 
 
+def reset_session_on_network_change():
+    """Clear session state when network changes."""
+    st.session_state["token"] = None
+    st.session_state["user_role"] = None
+    st.session_state["wallet_address"] = None
+
+
 # === Sidebar: Authentication ===
 with st.sidebar:
     st.title("System Settings")
 
-    network_choice = st.radio("Select Blockchain Network", ("Ethereum", "VeChain"), index=0)
+    network_choice = st.radio("Select Blockchain Network", ("Ethereum", "VeChain"), index=0, on_change=reset_session_on_network_change)
 
     if network_choice == "Ethereum":
         API_URL = ETH_API_URL
@@ -114,7 +121,7 @@ with st.sidebar:
 
 # ==== MAIN APP ====
 
-st.title("Maritime Spare Part Management System")
+st.title("Maritime Spare Parts Management System")
 
 try:
     stats_response = requests.get(f"{API_URL}/statistics").json()
@@ -193,7 +200,6 @@ with tab2:
                     data = response.json().get("part_details", {})
                     st.json(data)
                     part_id = data.get("part_id")
-
                     if part_id:
                         st.subheader("Service History")
                         history_response = requests.get(f"{API_URL}/history/{part_id}")
@@ -240,7 +246,9 @@ with tab3:
                     response = requests.post(f"{API_URL}/log_service", json=payload, headers=get_auth_headers())
                     if response.status_code == 200:
                         st.success("Service event logged successfully!")
-                        st.write(response.json())
+                        data = response.json()
+                        st.write(data)
+                        st.info(f"**Transaction Hash:** `{data['tx_hash']}`")
                     else:
                         st.error(f"Failed to log service event: {response.json().get('detail', 'Unknown error')}")
 
