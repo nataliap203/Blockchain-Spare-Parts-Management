@@ -30,7 +30,7 @@ class MaritimeManager:
         self.contract_address = details["address"]
         self.abi = details["abi"]
         self.connected_network = details["network"]
-        
+
         print(f"MaritimeManager initialized with contract at {self.contract_address}")
 
     def _format_date(self, timestamp: int) -> str:
@@ -245,6 +245,40 @@ class MaritimeManager:
             return tx_id
         except Exception as e:
             raise Exception(f"Failed to log service event: {str(e)}")
+
+    def extend_warranty(self, sender_pk: str, part_id_hex: str, additional_days: int) -> str:
+        sender_address = private_key_to_address(sender_pk)
+
+        if not self.check_role(sender_address, "OEM"):
+            raise PermissionError(f"Account {sender_address} lacks OEM role required to extend warranties.")
+
+        part_id_bytes = self._validate_part_id_format(part_id_hex)
+
+        # Verify that the part exists to prevent sending transaction that will revert
+        part_data = call_contract(
+            self.contract_address, self.abi, "parts", [part_id_bytes]
+        )
+        exists = part_data[7]
+        if not exists:
+            raise ValueError(f"Part with ID {part_id_hex} does not exist in the registry.")
+
+        additional_seconds = additional_days * 24 * 60 * 60
+
+        try:
+            tx_id = send_transaction(
+                self.contract_address,
+                self.abi,
+                "extendWarranty",
+                [part_id_bytes, additional_seconds],
+                sender_pk
+            )
+            receipt = wait_for_receipt(tx_id)
+            if receipt is None or receipt.get("reverted") is True:
+                raise Exception("Transaction to extend warranty failed.")
+
+            return tx_id
+        except Exception as e:
+            raise Exception(f"Failed to extend warranty: {str(e)}")
 
     # === READ METHODS ===
 

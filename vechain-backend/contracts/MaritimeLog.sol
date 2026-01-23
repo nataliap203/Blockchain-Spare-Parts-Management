@@ -52,7 +52,11 @@ contract MaritimeLog {
         string serviceType,
         uint256 eventTimestamp
     );
-
+    event WarrantyExtented(
+        bytes32 indexed partId,
+        uint256 newExpiryDate,
+        address extendedBy
+    );
 
     // Managment Functions
     // Constructor
@@ -144,6 +148,15 @@ contract MaritimeLog {
         } else {
             return (false, 0);
         }
+    }
+
+    function extendWarranty(bytes32 _partId, uint256 _additionalSeconds) public onlyRole(ROLE_OEM) {
+        require(parts[_partId].exists, "Part not registered.");
+        require(parts[_partId].manufacturer == msg.sender, "Only the OEM who manufactured the part can extend its warranty.");
+
+        parts[_partId].warrantyExpiryDate += _additionalSeconds;
+
+        emit WarrantyExtented(_partId, parts[_partId].warrantyExpiryDate, msg.sender);
     }
 
     function getPartHistory(bytes32 _partId) public view returns (ServiceEvent[] memory) {

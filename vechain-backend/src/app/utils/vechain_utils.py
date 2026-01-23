@@ -7,7 +7,8 @@ from web3._utils.abi import get_abi_output_types
 from eth_abi import decode_abi
 
 NODE_URL = os.getenv("HOST_ADDRESS", "https://testnet.vechain.org")
-CHAIN_TAG = int('0x27', 16)  # Testnet chain tag for VeChain
+CHAIN_TAG = int("0x27", 16)  # Testnet chain tag for VeChain
+
 
 def get_best_block_ref():
     """Fetches the reference of the best block from the VeChain testnet.
@@ -23,12 +24,14 @@ def get_best_block_ref():
     # block_ref is first 8 bytes of best block ID
     return best_block_id[:18]
 
+
 def get_best_block_number():
     block_response = requests.get(f"{NODE_URL}/blocks/best")
     if block_response.status_code != 200:
         raise Exception(f"Failed to fetch best block: {block_response.text}")
     block_result = block_response.json()
     return block_result["number"]
+
 
 def _get_function_definition(contract_abi, func_name):
     """Helpers to get function definition from ABI.
@@ -42,15 +45,17 @@ def _get_function_definition(contract_abi, func_name):
     Returns:
         dict: The function definition from the ABI.
     """
-    function_definition = next((item for item in contract_abi if item.get('type') == 'function' and item.get('name') == func_name), None)
+    function_definition = next((item for item in contract_abi if item.get("type") == "function" and item.get("name") == func_name), None)
 
     if not function_definition:
         raise ValueError(f"Function {func_name} not found in ABI")
     return function_definition
 
+
 def get_function_obj(contract_abi, func_name):
     func_def = _get_function_definition(contract_abi, func_name)
     return abi.Function(func_def)
+
 
 def call_contract(contract_address, contract_abi, func_name, args):
     """Calls a read-only function of a smart contract on the VeChain testnet.
@@ -72,15 +77,7 @@ def call_contract(contract_address, contract_abi, func_name, args):
     func_obj = abi.Function(func_def)
     data = func_obj.encode(args)
 
-    payload = {
-        "clauses": [
-            {
-                "to": contract_address,
-                "value": "0x0",
-                "data": ('0x' + data.hex()) if not data.startswith(b'0x') else data
-            }
-        ]
-    }
+    payload = {"clauses": [{"to": contract_address, "value": "0x0", "data": ("0x" + data.hex()) if not data.startswith(b"0x") else data}]}
     response = requests.post(f"{NODE_URL}/accounts/*", json=payload)
 
     if response.status_code != 200:
@@ -88,21 +85,21 @@ def call_contract(contract_address, contract_abi, func_name, args):
 
     result = response.json()
 
-    if result[0].get('reverted'):
-        revert_data = result[0].get('data', '')
-        revert_data = revert_data[2:] if revert_data.startswith('0x') else revert_data
+    if result[0].get("reverted"):
+        revert_data = result[0].get("data", "")
+        revert_data = revert_data[2:] if revert_data.startswith("0x") else revert_data
 
-        if revert_data.startswith('08c379a0'):  # Function selector for Error(string)
+        if revert_data.startswith("08c379a0"):  # Function selector for Error(string)
             try:
-                reason = decode_abi(['string'], bytes.fromhex(revert_data[8:]))[0] # Decode the revert reason after the selector
+                reason = decode_abi(["string"], bytes.fromhex(revert_data[8:]))[0]  # Decode the revert reason after the selector
                 raise ValueError(f"Contract Execution Reverted: {reason}")
             except Exception:
-                raise Exception(f"Contract Execution Reverted (Raw): {result[0].get('vmError')}") # If decoding fails, raise raw error
+                raise Exception(f"Contract Execution Reverted (Raw): {result[0].get('vmError')}")  # If decoding fails, raise raw error
         else:
-            raise Exception(f"Contract Execution Reverted (Raw): {result[0].get('vmError')}") # If not a standard revert, raise raw error
+            raise Exception(f"Contract Execution Reverted (Raw): {result[0].get('vmError')}")  # If not a standard revert, raise raw error
 
-    return_data_hex = result[0]['data']
-    return_data_hex = return_data_hex[2:] if return_data_hex.startswith('0x') else return_data_hex
+    return_data_hex = result[0]["data"]
+    return_data_hex = return_data_hex[2:] if return_data_hex.startswith("0x") else return_data_hex
 
     if not return_data_hex:
         return None
@@ -112,13 +109,14 @@ def call_contract(contract_address, contract_abi, func_name, args):
 
     return decoded_values[0] if len(decoded_values) == 1 else decoded_values
 
+
 def fetch_events(contract_address, contract_abi, event_name, start_block=0):
-    event_def = next((item for item in contract_abi if item.get('type') == 'event' and item.get('name') == event_name), None)
+    event_def = next((item for item in contract_abi if item.get("type") == "event" and item.get("name") == event_name), None)
     if not event_def:
         raise ValueError(f"Event {event_name} not found in ABI")
 
     event_obj = abi.Event(event_def)
-    event_topic = '0x' +event_obj.signature.hex()
+    event_topic = "0x" + event_obj.signature.hex()
 
     url = f"{NODE_URL}/logs/event"
     all_logs = []
@@ -129,7 +127,7 @@ def fetch_events(contract_address, contract_abi, event_name, start_block=0):
         payload = {
             "range": {"unit": "block", "from": start_block, "to": get_best_block_number()},
             "options": {"offset": offset, "limit": limit},
-            "criteriaSet": [{"address": contract_address, "topic0": event_topic}]
+            "criteriaSet": [{"address": contract_address, "topic0": event_topic}],
         }
         response = requests.post(url, json=payload)
         if response.status_code != 200:
@@ -144,41 +142,47 @@ def fetch_events(contract_address, contract_abi, event_name, start_block=0):
     decoded_events = []
     for log in all_logs:
         try:
-            raw_data = log['data']
+            raw_data = log["data"]
             if raw_data.startswith("0x"):
                 raw_data = raw_data[2:]
             data_bytes = bytes.fromhex(raw_data)
 
             topics_bytes = []
-            for t in log['topics']:
+            for t in log["topics"]:
                 if t.startswith("0x"):
                     t = t[2:]
                 topics_bytes.append(bytes.fromhex(t))
 
             decoded_args = event_obj.decode(data_bytes, topics_bytes)
-            decoded_events.append({
-                "args": decoded_args,
-                "meta": log
-            })
+            decoded_events.append({"args": decoded_args, "meta": log})
         except Exception as e:
             print(f"Failed to decode event log: {e}")
             continue
     return decoded_events
 
+
 def send_transaction(contract_address, contract_abi, func_name, args, private_key):
     try:
         func_obj = get_function_obj(contract_abi, func_name)
         data = func_obj.encode(args)
-        data_hex = '0x' + data.hex()
-        if private_key.startswith('0x'):
+        data_hex = "0x" + data.hex()
+        if private_key.startswith("0x"):
             private_key = private_key[2:]
         private_key_bytes = bytes.fromhex(private_key)
 
         clause = {"to": contract_address, "value": 0, "data": data_hex}
         block_ref = get_best_block_ref()
 
-        tx_body = {"chainTag": CHAIN_TAG, "blockRef": block_ref, "expiration": 720,
-                "clauses": [clause], "gasPriceCoef": 0, "gas": 1_000_000, "dependsOn": None, "nonce": int(time.time()) }
+        tx_body = {
+            "chainTag": CHAIN_TAG,
+            "blockRef": block_ref,
+            "expiration": 720,
+            "clauses": [clause],
+            "gasPriceCoef": 0,
+            "gas": 1_000_000,
+            "dependsOn": None,
+            "nonce": int(time.time()),
+        }
         tx = transaction.Transaction(tx_body)
 
         tx_hash = tx.get_signing_hash()
@@ -196,19 +200,21 @@ def send_transaction(contract_address, contract_abi, func_name, args, private_ke
     except Exception as e:
         raise Exception(f"Blockchain transaction failed: {str(e)}")
 
+
 def wait_for_receipt(tx_id, timeout=30):
     print(f"Waiting for transaction receipt for TX ID: {tx_id}")
     for _ in range(timeout):
         response = requests.get(f"{NODE_URL}/transactions/{tx_id}/receipt")
         receipt = response.json()
         if receipt:
-            if receipt.get('reverted'):
-                error_msg = receipt.get('vmError', 'Transaction Reverted without error message')
+            if receipt.get("reverted"):
+                error_msg = receipt.get("vmError", "Transaction Reverted without error message")
                 raise Exception(f"Transaction reverted: {error_msg}")
             return receipt
         time.sleep(1)
     print("Timeout waiting for transaction receipt.")
     return None
+
 
 def private_key_to_address(private_key_hex: str) -> str:
     if private_key_hex.startswith("0x"):
@@ -221,6 +227,7 @@ def private_key_to_address(private_key_hex: str) -> str:
 
     return "0x" + address_bytes.hex()
 
+
 def generate_new_wallet():
     private_key = secrets.token_hex(32)
-    return '0x' + private_key
+    return "0x" + private_key
