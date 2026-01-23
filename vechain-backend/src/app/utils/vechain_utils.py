@@ -208,7 +208,7 @@ def wait_for_receipt(tx_id, timeout=30):
         receipt = response.json()
         if receipt:
             if receipt.get("reverted"):
-                error_msg = receipt.get("vmError", "Transaction Reverted without error message")
+                error_msg = receipt.get("vmError", "Error details not available")
                 raise Exception(f"Transaction reverted: {error_msg}")
             return receipt
         time.sleep(1)
