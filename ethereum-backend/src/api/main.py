@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 from eth_account import Account
 
 from src.app.maritime_manager import MaritimeManager
-from src.api.schemas import RegisterPartRequest, LogServiceEventRequest, RoleRequest, UserCreateRequest
+from src.api.schemas import RegisterPartRequest, LogServiceEventRequest, RoleRequest, UserCreateRequest, ExtendWarrantyRequest
 from src.app.database import get_session, init_db, engine
 from src.app.models import User
 from src.app.security import (
@@ -370,6 +370,28 @@ def log_service_event(request: LogServiceEventRequest, current_user: User = Depe
             service_protocol_hash=request.service_protocol_hash,
         )
         return {"status": "success", "tx_hash": tx_hash}
+    except PermissionError as pe:
+        raise HTTPException(status_code=403, detail=str(pe))
+    except ValueError as ve:
+        if "does not exist" in str(ve):
+            raise HTTPException(status_code=404, detail=str(ve))
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# === EXTEND WARRANTY ===
+@app.post("/parts/extend-warranty")
+def extend_warranty(request: ExtendWarrantyRequest, current_user: User = Depends(get_current_user)):
+    try:
+        sender_account = get_custodial_account(current_user)
+        if request.sender_address != current_user.wallet_address:
+            raise HTTPException(status_code=403, detail="Wallet mismatch: Sender address does not match authenticated user.")
+
+        tx_id = manager.extend_warranty(
+            sender_account=sender_account, part_id_hex=request.part_id_hex, additional_days=request.additional_days
+        )
+        return {"status": "success", "tx_hash": tx_id}
     except PermissionError as pe:
         raise HTTPException(status_code=403, detail=str(pe))
     except ValueError as ve:

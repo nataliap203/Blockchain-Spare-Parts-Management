@@ -262,6 +262,29 @@ class MaritimeManager:
         except Exception as e:
             raise Exception(f"Failed to log service event: {str(e)}")
 
+    def extend_warranty(self, sender_account, part_id_hex: str, additional_days: int):
+        sender_address = sender_account.address if hasattr(sender_account, 'address') else sender_account
+
+        if not self.check_role(sender_address, "OEM"):
+            raise PermissionError(f"Account {sender_address} lacks OEM role required to extend warranties.")
+
+        part_id_bytes = self._validate_part_id_format(part_id_hex)
+        part_data = self.contract.functions.parts(part_id_bytes).call()
+        exists = part_data[7]
+        if not exists:
+            raise ValueError(f"Part with ID {part_id_hex} does not exist in the registry.")
+
+        func = self.contract.functions.extendWarranty(
+            part_id_bytes,
+            additional_days * 24 * 60 * 60,
+        )
+        try:
+            tx_hash, receipt = self._send_transaction(func, sender_account)
+            return tx_hash.hex()
+        except Exception as e:
+            raise Exception(f"Failed to extend warranty: {str(e)}")
+
+
     # === READ METHODS ===
 
     def get_part_id(self, manufacturer_address: str, serial_number: str):

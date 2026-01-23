@@ -291,7 +291,6 @@ with tab5:
                 if response.status_code == 200:
                     st.success("Warranty extended successfully!")
                     data = response.json()
-                    st.write(data)
                     st.info(f"**Transaction Hash:** `{data['tx_hash']}`")
                 else:
                     st.error(f"Failed to extend warranty: {response.json().get('detail', 'Unknown error')}")
