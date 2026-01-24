@@ -412,6 +412,111 @@ def test_log_service_event_invalid_id_format(mock_maritime_manager, mocker):
     assert "Invalid part ID format" in str(exc_info.value)
 
 
+# -- Test extend_warranty --
+def test_extend_warranty_success(mock_maritime_manager, mocker):
+    """Test successful warranty extension."""
+    manufacturer_address = "0x" + "1" * 40
+    mocker.patch("src.app.maritime_manager.private_key_to_address", return_value=manufacturer_address)
+    mocker.patch.object(mock_maritime_manager, "check_role", return_value=True)
+    mock_part_data = [
+        "Engine Part",
+        manufacturer_address,
+        "SN123",
+        1000,
+        2000,
+        "Vessel1",
+        "Hash",
+        True,  # exists
+    ]
+    mocker.patch("src.app.maritime_manager.call_contract", return_value=mock_part_data)
+
+    mock_send = mocker.patch("src.app.maritime_manager.send_transaction", return_value="0xTxExtend")
+    mocker.patch("src.app.maritime_manager.wait_for_receipt", return_value={"reverted": False})
+
+    additional_days = 30
+    tx_id = mock_maritime_manager.extend_warranty(
+        sender_pk=VALID_TEST_PK,
+        part_id_hex="0x" + "3" * 64,
+        additional_days=additional_days,
+    )
+    assert tx_id == "0xTxExtend"
+    expected_seconds = additional_days * 24 * 60 * 60
+    args = mock_send.call_args[0]  # args pozycyjne: (addr, abi, func, contract_args, pk)
+    contract_args = args[3]
+    assert contract_args[1] == expected_seconds
+
+
+def test_extend_warranty_no_oem_role(mock_maritime_manager, mocker):
+    """Test warranty extension failure due to sender lacking OEM role."""
+    mocker.patch("src.app.maritime_manager.private_key_to_address", return_value="0x" + "1" * 40)
+    mocker.patch.object(mock_maritime_manager, "check_role", return_value=False)
+    with pytest.raises(PermissionError) as excinfo:
+        mock_maritime_manager.extend_warranty(
+            sender_pk=VALID_TEST_PK,
+            part_id_hex="0x" + "3" * 64,
+            additional_days=30,
+        )
+    assert "lacks OEM role" in str(excinfo.value)
+
+
+def test_extend_warranty_oem_is_not_producer(mock_maritime_manager, mocker):
+    """Test warranty extension failure due to sender not being the OEM for that part."""
+    manufacturer_address = "0x" + "1" * 40
+    sender_address = "0x" + "2" * 40
+    mocker.patch("src.app.maritime_manager.private_key_to_address", return_value=sender_address)
+    mocker.patch.object(mock_maritime_manager, "check_role", return_value=True)
+    mock_part_data = [None] * 8
+    mock_part_data[1] = manufacturer_address
+    mock_part_data[7] = True  # exists flag
+    mocker.patch("src.app.maritime_manager.call_contract", return_value=mock_part_data)
+
+    with pytest.raises(PermissionError) as excinfo:
+        mock_maritime_manager.extend_warranty(
+            sender_pk=VALID_TEST_PK,
+            part_id_hex="0x" + "3" * 64,
+            additional_days=30,
+        )
+    assert "Only the OEM that registered the part can extend its warranty." in str(excinfo.value)
+
+
+def test_extend_warranty_part_not_found(mock_maritime_manager, mocker):
+    """Test warranty extension failure due to part not found."""
+    manufacturer_address = "0x" + "1" * 40
+    mocker.patch("src.app.maritime_manager.private_key_to_address", return_value=manufacturer_address)
+    mock_part_data = [None] * 8
+    mock_part_data[1] = manufacturer_address
+    mock_part_data[7] = False  # exists flag
+    mocker.patch("src.app.maritime_manager.call_contract", return_value=mock_part_data)
+
+    with pytest.raises(ValueError) as excinfo:
+        mock_maritime_manager.extend_warranty(
+            sender_pk=VALID_TEST_PK,
+            part_id_hex="0x" + "3" * 64,
+            additional_days=30,
+        )
+    assert "does not exist in the registry" in str(excinfo.value)
+
+
+def test_extend_warranty_transaction_failed(mock_maritime_manager, mocker):
+    """Test warranty extension failure due to transaction revert."""
+    mocker.patch("src.app.maritime_manager.private_key_to_address", return_value="0x" + "1" * 40)
+    mocker.patch.object(mock_maritime_manager, "check_role", return_value=True)
+    mock_part_data = [None] * 8
+    mock_part_data[7] = True  # exists flag
+    mocker.patch("src.app.maritime_manager.call_contract", return_value=mock_part_data)
+
+    mocker.patch("src.app.maritime_manager.send_transaction", return_value="0xTxHash")
+    mocker.patch("src.app.maritime_manager.wait_for_receipt", return_value={"reverted": True})
+
+    with pytest.raises(Exception) as excinfo:
+        mock_maritime_manager.extend_warranty(
+            sender_pk=VALID_TEST_PK,
+            part_id_hex="0x" + "3" * 64,
+            additional_days=30,
+        )
+    assert "Transaction to extend warranty failed" in str(excinfo.value)
+
+
 # -- Test get_all_parts --
 
 

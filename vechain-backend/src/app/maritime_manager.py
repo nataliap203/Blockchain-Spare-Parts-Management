@@ -226,11 +226,11 @@ class MaritimeManager:
         # Verify that the part exists to prevent sending transaction that will revert
         part_data = call_contract(self.contract_address, self.abi, "parts", [part_id_bytes])
         manufacturer = part_data[1]
-        if manufacturer.lower() != sender_address.lower():
-            raise PermissionError("Only the OEM that registered the part can extend its warranty.")
         exists = part_data[7]
         if not exists:
             raise ValueError(f"Part with ID {part_id_hex} does not exist in the registry.")
+        if manufacturer and manufacturer.lower() != sender_address.lower():
+            raise PermissionError("Only the OEM that registered the part can extend its warranty.")
 
         additional_seconds = additional_days * 24 * 60 * 60
 
