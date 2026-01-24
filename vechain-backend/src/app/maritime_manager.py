@@ -78,7 +78,7 @@ class MaritimeManager:
         return bytes.fromhex(clean_hex)
 
     def fund_account(self, target_address: str, amount_vtho: float = 50.0) -> str:
-        """Fund a VeChain account with VTHO tokens.
+        """Fund a VeChain account with VTHO tokens from the operator account.
         Args:
             target_address (str): The address to fund.
             amount_vtho (float): The amount of VTHO to send.

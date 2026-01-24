@@ -2,6 +2,7 @@ import os
 import json
 from datetime import datetime
 from web3 import Web3
+from typing import List, Dict
 from eth_account import Account
 from dotenv import load_dotenv
 from src.app.utils import transfer_eth
@@ -38,10 +39,8 @@ class MaritimeManager:
 
     def _format_date(self, timestamp: int) -> str:
         """Format a timestamp into a human-readable date string.
-
         Args:
             timestamp (int): The timestamp to format.
-
         Returns:
             str: The formatted date string or "N/A" if the timestamp is invalid.
         """
@@ -50,6 +49,12 @@ class MaritimeManager:
         return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M")
 
     def _validate_part_id_format(self, part_id_hex: str) -> bytes:
+        """Validate and convert a part ID from hex string to bytes.
+        Args:
+            part_id_hex (str): The part ID in hexadecimal string format.
+        Returns:
+            bytes: The part ID as a bytes object.
+        """
         clean_hex = part_id_hex.strip().lower()
         clean_hex = clean_hex[2:] if clean_hex.startswith("0x") else clean_hex
 
@@ -64,11 +69,9 @@ class MaritimeManager:
 
     def _send_transaction(self, contract_function, account):
         """Wraps transaction sending for both Anvil and production-like environments with database.
-
         Args:
             contract_function (): The contract function to call.
             account (str, LocalAccount): The account to use for the transaction.
-
         Returns:
             str: Transaction hash of the sent transaction.
         """
@@ -91,7 +94,13 @@ class MaritimeManager:
             raise Exception(f"Blockchain transaction failed: {str(e)}")
 
     def fund_account(self, target_address: str, amount_ether: float):
-        """Fund an Ethereum account with a specified amount of Ether from the default account."""
+        """Fund a target Ethereum address with a specified amount of Ether from the operator's account.
+        Args:
+            target_address (str): The Ethereum address to fund.
+            amount_ether (float): The amount of Ether to send.
+        Returns:
+            str: Transaction hash of the funding transaction.
+        """
         operator_pk = os.getenv("OPERATOR_PRIVATE_KEY")
         if operator_pk is None:
             print("OPERATOR_PRIVATE_KEY not set. Cannot fund account.")
@@ -108,6 +117,14 @@ class MaritimeManager:
     # === ACCESS CONTROL ===
 
     def grant_role(self, sender_account, role_name: str, target_address: str):
+        """Grant a specific role to a target account.
+        Args:
+            sender_account (str, LocalAccount): The account initiating the role grant.
+            role_name (str): The name of the role to grant.
+            target_address (str): The address of the account to receive the role.
+        Returns:
+            str: Transaction hash of the role grant transaction.
+        """
         sender_address = sender_account.address if hasattr(sender_account, "address") else sender_account
 
         if not self.check_role(sender_address, "OPERATOR"):
@@ -146,6 +163,13 @@ class MaritimeManager:
             raise Exception(f"Failed to grant role: {str(e)}")
 
     def check_role(self, address_to_check: str, role_name: str) -> bool:
+        """Check if a specific address has a given role.
+        Args:
+            address_to_check (str): The Ethereum address to check.
+            role_name (str): The name of the role to verify.
+        Returns:
+            bool: True if the address has the role, False otherwise.
+        """
         if not self.web3.is_address(address_to_check):
             raise ValueError(f"Address {address_to_check} is not a valid Ethereum address.")
 
@@ -168,6 +192,14 @@ class MaritimeManager:
             raise Exception(f"Failed to check role: {str(e)}")
 
     def revoke_role(self, sender_account, role_name: str, target_address: str):
+        """Revoke a specific role from a target account.
+        Args:
+            sender_account (str, LocalAccount): The account initiating the role revocation.
+            role_name (str): The name of the role to revoke.
+            target_address (str): The address of the account to lose the role.
+        Returns:
+            str: Transaction hash of the role revocation transaction.
+        """
         sender_address = sender_account.address if hasattr(sender_account, "address") else sender_account
 
         if sender_address == target_address:
@@ -212,6 +244,17 @@ class MaritimeManager:
     def register_part(
         self, sender_account, part_name: str, serial_number: str, warranty_days: int, vessel_id: str, certificate_hash: str
     ) -> str:
+        """Register a new part in the system.
+        Args:
+            sender_account (str, LocalAccount): The account registering the part.
+            part_name (str): The name of the part.
+            serial_number (str): The serial number of the part.
+            warranty_days (int): Warranty duration in days.
+            vessel_id (str): Identifier of the vessel where the part is installed.
+            certificate_hash (str): Hash of the part's certificate.
+        Returns:
+            str: Transaction hash of the part registration.
+        """
         sender_address = sender_account.address if hasattr(sender_account, "address") else sender_account
 
         if not self.check_role(sender_address, "OEM"):
@@ -239,6 +282,15 @@ class MaritimeManager:
             raise Exception(f"Failed to register part: {str(e)}")
 
     def log_service_event(self, sender_account, part_id_hex: str, service_type: str, service_protocol_hash: str):
+        """Log a service event for a specific part.
+        Args:
+            sender_account (str, LocalAccount): The account logging the service event.
+            part_id_hex (str): The unique identifier of the part (hex).
+            service_type (str): Description of the service performed.
+            service_protocol_hash (str): Hash of the service protocol document.
+        Returns:
+            str: Transaction hash of the service event logging.
+        """
         sender_address = sender_account.address if hasattr(sender_account, "address") else sender_account
 
         if not (self.check_role(sender_address, "SERVICE") or self.check_role(sender_address, "OPERATOR")):
@@ -264,6 +316,14 @@ class MaritimeManager:
             raise Exception(f"Failed to log service event: {str(e)}")
 
     def extend_warranty(self, sender_account, part_id_hex: str, additional_days: int):
+        """Extend the warranty of a specific part.
+        Args:
+            sender_account (str, LocalAccount): The account extending the warranty.
+            part_id_hex (str): The unique identifier of the part (hex).
+            additional_days (int): Number of additional days to extend the warranty.
+        Returns:
+            str: Transaction hash of the warranty extension.
+        """
         sender_address = sender_account.address if hasattr(sender_account, "address") else sender_account
 
         if not self.check_role(sender_address, "OEM"):
@@ -292,6 +352,13 @@ class MaritimeManager:
     # === READ METHODS ===
 
     def get_part_id(self, manufacturer_address: str, serial_number: str):
+        """Get the part ID for a given manufacturer and serial number.
+        Args:
+            manufacturer_address (str): The Ethereum address of the manufacturer.
+            serial_number (str): The serial number of the part.
+        Returns:
+            str: The part ID in hexadecimal string format.
+        """
         if not self.web3.is_address(manufacturer_address):
             raise ValueError(f"Invalid manufacturer Ethereum address: {manufacturer_address}")
         try:
@@ -305,7 +372,11 @@ class MaritimeManager:
         except Exception as e:
             raise Exception(f"Failed to get part ID: {str(e)}")
 
-    def get_all_parts(self):
+    def get_all_parts(self) -> List[Dict]:
+        """Retrieve a list of all registered parts in the system.
+        Returns:
+            List[Dict]: A list of dictionaries containing part details.
+        """
         all_parts = []
         try:
             event_filter = self.contract.events.PartRegistered.create_filter(from_block=0)
@@ -326,7 +397,14 @@ class MaritimeManager:
         except Exception as e:
             raise Exception(f"Failed to fetch parts list from blockchain: {str(e)}")
 
-    def get_part_details(self, manufacturer_address: str, serial_number: str):
+    def get_part_details(self, manufacturer_address: str, serial_number: str) -> Dict:
+        """Retrieve detailed information about a specific part.
+        Args:
+            manufacturer_address (str): The Ethereum address of the manufacturer.
+            serial_number (str): The serial number of the part.
+        Returns:
+            Dict: A dictionary containing detailed part information.
+        """
         try:
             part_id_hex = self.get_part_id(manufacturer_address, serial_number)
             part_data = self.contract.functions.parts(
@@ -351,7 +429,13 @@ class MaritimeManager:
         except Exception as e:
             raise Exception(f"Failed to get part details: {str(e)}")
 
-    def get_part_history(self, part_id_hex: str):
+    def get_part_history(self, part_id_hex: str) -> List[Dict]:
+        """Retrieve the service history of a specific part.
+        Args:
+            part_id_hex (str): The unique identifier of the part (hex).
+        Returns:
+            List[Dict]: A list of service events for the specified part.
+        """
         part_id_bytes = self._validate_part_id_format(part_id_hex)
 
         try:
@@ -373,6 +457,13 @@ class MaritimeManager:
             raise Exception(f"Failed to get part history: {str(e)}")
 
     def check_warranty_status(self, part_id_hex: str):
+        """Check the warranty status of a specific part.
+        Args:
+            part_id_hex (str): The part ID in hexadecimal string format.
+        Returns:
+            Tuple[bool, int]: A tuple where the first element indicates if the warranty is valid,
+                              and the second element is the number of days left (0 if expired).
+        """
         part_id_bytes = self._validate_part_id_format(part_id_hex)
 
         try:
@@ -390,6 +481,10 @@ class MaritimeManager:
 
     # === STATS ===
     def get_system_statistics(self):
+        """Retrieve overall system statistics.
+        Returns:
+            Dict[str, int]: A dictionary containing total parts, active warranties, and expired warranties.
+        """
         try:
             all_parts = self.get_all_parts()
 
