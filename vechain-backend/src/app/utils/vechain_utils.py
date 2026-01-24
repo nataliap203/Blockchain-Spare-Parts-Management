@@ -26,6 +26,10 @@ def get_best_block_ref():
 
 
 def get_best_block_number():
+    """Fetches the number of the best block from the VeChain testnet.
+    Returns:
+        int: The number of the best block.
+    """
     block_response = requests.get(f"{NODE_URL}/blocks/best")
     if block_response.status_code != 200:
         raise Exception(f"Failed to fetch best block: {block_response.text}")
@@ -35,13 +39,9 @@ def get_best_block_number():
 
 def _get_function_definition(contract_abi, func_name):
     """Helpers to get function definition from ABI.
-
     Args:
         contract_abi (list): The ABI of the contract.
         func_name (str): The name of the function to retrieve.
-
-    Raises:
-        ValueError: If the function is not found in the ABI.
     Returns:
         dict: The function definition from the ABI.
     """
@@ -53,25 +53,26 @@ def _get_function_definition(contract_abi, func_name):
 
 
 def get_function_obj(contract_abi, func_name):
+    """Gets a function object from the contract ABI.
+    Args:
+        contract_abi (list): The ABI of the contract.
+        func_name (str): The name of the function to retrieve.
+    Returns:
+        abi.Function: The function object.
+    """
     func_def = _get_function_definition(contract_abi, func_name)
     return abi.Function(func_def)
 
 
 def call_contract(contract_address, contract_abi, func_name, args):
     """Calls a read-only function of a smart contract on the VeChain testnet.
-
     Args:
         contract_address (str): Address of the contract.
         contract_abi (list): The ABI of the contract.
         func_name (str): The name of the function to call.
         args (list): The arguments to pass to the function.
-
-    Raises:
-        Exception: If the contract call fails.
-        Exception: If the contract call is reverted.
-
     Returns:
-        list: The decoded output from the contract function call.
+        any: The decoded return value(s) from the contract function.
     """
     func_def = _get_function_definition(contract_abi, func_name)
     func_obj = abi.Function(func_def)
@@ -111,6 +112,15 @@ def call_contract(contract_address, contract_abi, func_name, args):
 
 
 def fetch_events(contract_address, contract_abi, event_name, start_block=0):
+    """Fetches and decodes events emitted by a smart contract on the VeChain testnet.
+    Args:
+        contract_address (str): Address of the contract.
+        contract_abi (list): The ABI of the contract.
+        event_name (str): The name of the event to fetch.
+        start_block (int): The block number to start fetching events from.
+    Returns:
+        list: A list of decoded event logs.
+    """
     event_def = next((item for item in contract_abi if item.get("type") == "event" and item.get("name") == event_name), None)
     if not event_def:
         raise ValueError(f"Event {event_name} not found in ABI")
@@ -162,6 +172,16 @@ def fetch_events(contract_address, contract_abi, event_name, start_block=0):
 
 
 def send_transaction(contract_address, contract_abi, func_name, args, private_key):
+    """Sends a transaction to a smart contract function on the VeChain testnet.
+    Args:
+        contract_address (str): Address of the contract.
+        contract_abi (list): The ABI of the contract.
+        func_name (str): The name of the function to call.
+        args (list): The arguments to pass to the function.
+        private_key (str): The private key to sign the transaction.
+    Returns:
+        str: The transaction ID.
+    """
     try:
         func_obj = get_function_obj(contract_abi, func_name)
         data = func_obj.encode(args)
@@ -202,6 +222,13 @@ def send_transaction(contract_address, contract_abi, func_name, args, private_ke
 
 
 def wait_for_receipt(tx_id, timeout=30):
+    """Waits for a transaction receipt from the VeChain testnet.
+    Args:
+        tx_id (str): The transaction ID.
+        timeout (int): Maximum time to wait for the receipt in seconds.
+    Returns:
+        dict: The transaction receipt.
+    """
     print(f"Waiting for transaction receipt for TX ID: {tx_id}")
     for _ in range(timeout):
         response = requests.get(f"{NODE_URL}/transactions/{tx_id}/receipt")
@@ -217,6 +244,12 @@ def wait_for_receipt(tx_id, timeout=30):
 
 
 def private_key_to_address(private_key_hex: str) -> str:
+    """Converts a private key to its corresponding VeChain address.
+    Args:
+        private_key_hex (str): The private key in hexadecimal format.
+    Returns:
+        str: The corresponding VeChain address in hexadecimal format.
+    """
     if private_key_hex.startswith("0x"):
         private_key_hex = private_key_hex[2:]
 
@@ -229,5 +262,9 @@ def private_key_to_address(private_key_hex: str) -> str:
 
 
 def generate_new_wallet():
+    """Generates a new VeChain wallet (private key).
+    Returns:
+        str: The generated private key in hexadecimal format.
+    """
     private_key = secrets.token_hex(32)
     return "0x" + private_key
