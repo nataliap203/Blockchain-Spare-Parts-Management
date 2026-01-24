@@ -1,5 +1,6 @@
 services:
   ethereum-backend:
+    platform: linux/amd64
     build:
       context: ./ethereum-backend
     container_name: maritime-ethereum-backend

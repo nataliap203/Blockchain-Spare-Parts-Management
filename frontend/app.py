@@ -5,7 +5,7 @@ import requests
 ETH_API_URL = os.getenv("ETH_API_URL", "http://localhost:8000")
 VET_API_URL = os.getenv("VET_API_URL", "http://localhost:8001")
 
-st.set_page_config(page_title="Spare Part Management", layout="wide")
+st.set_page_config(page_title="Spare Parts Management", layout="wide")
 
 # === Session State Management ===
 if "token" not in st.session_state:
@@ -29,11 +29,18 @@ def logout():
     st.rerun()
 
 
+def reset_session_on_network_change():
+    """Clear session state when network changes."""
+    st.session_state["token"] = None
+    st.session_state["user_role"] = None
+    st.session_state["wallet_address"] = None
+
+
 # === Sidebar: Authentication ===
 with st.sidebar:
     st.title("System Settings")
 
-    network_choice = st.radio("Select Blockchain Network", ("Ethereum", "VeChain"), index=0)
+    network_choice = st.radio("Select Blockchain Network", ("Ethereum", "VeChain"), index=0, on_change=reset_session_on_network_change)
 
     if network_choice == "Ethereum":
         API_URL = ETH_API_URL
@@ -114,7 +121,7 @@ with st.sidebar:
 
 # ==== MAIN APP ====
 
-st.title("Maritime Spare Part Management System")
+st.title("Maritime Spare Parts Management System")
 
 try:
     stats_response = requests.get(f"{API_URL}/statistics").json()
@@ -128,8 +135,8 @@ except Exception as e:
 
 # For logged users
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
-    ["Register Part", "Search", "Log Service Event", "Warranty Check", "All Parts", "Role management"]
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(
+    ["Register Part", "Search", "Log Service Event", "Warranty Check", "Extend Warranty", "All Parts", "Role management"]
 )
 
 # --- Tab 1: Register Part (Auth required) ---
@@ -193,7 +200,6 @@ with tab2:
                     data = response.json().get("part_details", {})
                     st.json(data)
                     part_id = data.get("part_id")
-
                     if part_id:
                         st.subheader("Service History")
                         history_response = requests.get(f"{API_URL}/history/{part_id}")
@@ -240,7 +246,9 @@ with tab3:
                     response = requests.post(f"{API_URL}/log_service", json=payload, headers=get_auth_headers())
                     if response.status_code == 200:
                         st.success("Service event logged successfully!")
-                        st.write(response.json())
+                        data = response.json()
+                        st.write(data)
+                        st.info(f"**Transaction Hash:** `{data['tx_hash']}`")
                     else:
                         st.error(f"Failed to log service event: {response.json().get('detail', 'Unknown error')}")
 
@@ -265,8 +273,31 @@ with tab4:
                 else:
                     st.error(f"Failed to check warranty: {response.json().get('detail', 'Unknown error')}")
 
-# --- Tab 5: All Registered Spare Parts (Public/Read-Only) ---
+# --- Tab 5: Extend Warranty (Auth required) ---
 with tab5:
+    st.header("Extend Warranty")
+    with st.form("extend_warranty_form"):
+        extend_part_id = st.text_input("Part ID (hex)", key="extend_part_id")
+        additional_days = st.number_input("Additional Warranty Days", min_value=1, value=30, key="additional_days")
+        submitted = st.form_submit_button("Extend Warranty")
+        if submitted:
+            payload = {
+                "sender_address": st.session_state["wallet_address"],
+                "part_id_hex": extend_part_id,
+                "additional_days": additional_days,
+            }
+            with st.spinner("Extending warranty..."):
+                response = requests.post(f"{API_URL}/parts/extend-warranty", json=payload, headers=get_auth_headers())
+                if response.status_code == 200:
+                    st.success("Warranty extended successfully!")
+                    data = response.json()
+                    st.info(f"**Transaction Hash:** `{data['tx_hash']}`")
+                else:
+                    st.error(f"Failed to extend warranty: {response.json().get('detail', 'Unknown error')}")
+
+
+# --- Tab 6: All Registered Spare Parts (Public/Read-Only) ---
+with tab6:
     st.header("All Registered Spare Parts")
     if st.button("Refresh List"):
         with st.spinner("Fetching all parts..."):
@@ -280,8 +311,8 @@ with tab5:
             else:
                 st.error(f"Failed to fetch parts: {parts_response.status_code}")
 
-# -- Tab 6: Role Management (Auth and OPERATOR role required) / Check Role (Public/Read-Only) ---
-with tab6:
+# -- Tab 7: Role Management (Auth and OPERATOR role required) / Check Role (Public/Read-Only) ---
+with tab7:
     st.header("Role Management")
     if not st.session_state["token"]:
         st.warning("Please Log in or Register using the sidebar to access this section.")

@@ -75,26 +75,20 @@ class MaritimeManager:
         try:
             # Anvil: Simplified for clarity; handle gas, nonce, signing, etc.
             if isinstance(account, str):
-                return contract_function.transact({'from': account})
+                return contract_function.transact({"from": account})
 
             # Production-like environment with private key signing
-            elif hasattr(account, 'key'):
+            elif hasattr(account, "key"):
                 nonce = self.web3.eth.get_transaction_count(account.address)
-                tx_params = {
-                    'from': account.address,
-                    'nonce': nonce,
-                    'gasPrice': self.web3.eth.gas_price
-                }
+                tx_params = {"from": account.address, "nonce": nonce, "gasPrice": self.web3.eth.gas_price}
                 tx_data = contract_function.build_transaction(tx_params)
                 signed_tx = account.sign_transaction(tx_data)
                 tx_hash = self.web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-                receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
-                return tx_hash, receipt
+                return tx_hash
             else:
                 raise TypeError("Account must be a string address or a LocalAccount instance.")
         except Exception as e:
             raise Exception(f"Blockchain transaction failed: {str(e)}")
-
 
     def fund_account(self, target_address: str, amount_ether: float):
         """Fund an Ethereum account with a specified amount of Ether from the default account."""
@@ -114,7 +108,7 @@ class MaritimeManager:
     # === ACCESS CONTROL ===
 
     def grant_role(self, sender_account, role_name: str, target_address: str):
-        sender_address = sender_account.address if hasattr(sender_account, 'address') else sender_account
+        sender_address = sender_account.address if hasattr(sender_account, "address") else sender_account
 
         if not self.check_role(sender_address, "OPERATOR"):
             raise PermissionError(f"Access Denied:Account {sender_address} lacks OPERATOR role required to grant roles.")
@@ -123,7 +117,7 @@ class MaritimeManager:
             raise ValueError(f"Address {target_address} is not a valid Ethereum address.")
 
         try:
-            target_address = self.web3.to_checksum_address(target_address) # Ensure checksum format
+            target_address = self.web3.to_checksum_address(target_address)  # Ensure checksum format
         except Exception:
             raise ValueError(f"Address {target_address} is not valid.")
 
@@ -142,9 +136,10 @@ class MaritimeManager:
 
         try:
             func = self.contract.functions.grantRole(role_hash, target_address)
-            tx_hash, receipt = self._send_transaction(func, sender_account)
+            tx_hash = self._send_transaction(func, sender_account)
+            receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
 
-            if receipt['status'] != 1:
+            if receipt["status"] != 1:
                 raise Exception("Transaction executed but reverted.")
             return tx_hash.hex()
         except Exception as e:
@@ -158,7 +153,7 @@ class MaritimeManager:
             raise ValueError(f"Role '{role_name}' does not exist in the system.")
 
         try:
-            address_to_check = self.web3.to_checksum_address(address_to_check) # Ensure checksum format
+            address_to_check = self.web3.to_checksum_address(address_to_check)  # Ensure checksum format
         except Exception:
             raise ValueError(f"Address {address_to_check} is not valid.")
 
@@ -173,7 +168,7 @@ class MaritimeManager:
             raise Exception(f"Failed to check role: {str(e)}")
 
     def revoke_role(self, sender_account, role_name: str, target_address: str):
-        sender_address = sender_account.address if hasattr(sender_account, 'address') else sender_account
+        sender_address = sender_account.address if hasattr(sender_account, "address") else sender_account
 
         if sender_address == target_address:
             raise ValueError("An account cannot revoke its own role to prevent accidental lockout.")
@@ -188,7 +183,7 @@ class MaritimeManager:
             raise ValueError(f"Role '{role_name}' does not exist in the system.")
 
         try:
-            target_address = self.web3.to_checksum_address(target_address) # Ensure checksum format
+            target_address = self.web3.to_checksum_address(target_address)  # Ensure checksum format
         except Exception:
             raise ValueError(f"Address {target_address} is not valid.")
 
@@ -203,9 +198,10 @@ class MaritimeManager:
 
         try:
             func = self.contract.functions.revokeRole(role_hash, target_address)
-            tx_hash, receipt = self._send_transaction(func, sender_account)
+            tx_hash = self._send_transaction(func, sender_account)
+            receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
 
-            if receipt['status'] != 1:
+            if receipt["status"] != 1:
                 raise Exception("Transaction executed but reverted.")
             return tx_hash.hex()
         except Exception as e:
@@ -213,8 +209,10 @@ class MaritimeManager:
 
     # === TRANSACTION METHODS ====
 
-    def register_part(self, sender_account, part_name: str, serial_number: str, warranty_days: int, vessel_id: str, certificate_hash: str) -> str:
-        sender_address = sender_account.address if hasattr(sender_account, 'address') else sender_account
+    def register_part(
+        self, sender_account, part_name: str, serial_number: str, warranty_days: int, vessel_id: str, certificate_hash: str
+    ) -> str:
+        sender_address = sender_account.address if hasattr(sender_account, "address") else sender_account
 
         if not self.check_role(sender_address, "OEM"):
             raise PermissionError(f"Account {sender_address} lacks OEM role required to register parts.")
@@ -234,13 +232,14 @@ class MaritimeManager:
             certificate_hash,
         )
         try:
-            tx_hash, receipt = self._send_transaction(func, sender_account)
+            tx_hash = self._send_transaction(func, sender_account)
+            receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
             return tx_hash.hex()
         except Exception as e:
             raise Exception(f"Failed to register part: {str(e)}")
 
     def log_service_event(self, sender_account, part_id_hex: str, service_type: str, service_protocol_hash: str):
-        sender_address = sender_account.address if hasattr(sender_account, 'address') else sender_account
+        sender_address = sender_account.address if hasattr(sender_account, "address") else sender_account
 
         if not (self.check_role(sender_address, "SERVICE") or self.check_role(sender_address, "OPERATOR")):
             raise PermissionError(f"Account {sender_address} lacks SERVICE or OPERATOR role required to log service events.")
@@ -257,10 +256,38 @@ class MaritimeManager:
             service_protocol_hash,
         )
         try:
-            tx_hash, receipt = self._send_transaction(func, sender_account)
+            tx_hash = self._send_transaction(func, sender_account)
+            receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+
             return tx_hash.hex()
         except Exception as e:
             raise Exception(f"Failed to log service event: {str(e)}")
+
+    def extend_warranty(self, sender_account, part_id_hex: str, additional_days: int):
+        sender_address = sender_account.address if hasattr(sender_account, "address") else sender_account
+
+        if not self.check_role(sender_address, "OEM"):
+            raise PermissionError(f"Account {sender_address} lacks OEM role required to extend warranties.")
+
+        part_id_bytes = self._validate_part_id_format(part_id_hex)
+        part_data = self.contract.functions.parts(part_id_bytes).call()
+        manufacturer_address = part_data[1]
+        exists = part_data[7]
+        if not exists:
+            raise ValueError(f"Part with ID {part_id_hex} does not exist in the registry.")
+        if manufacturer_address and manufacturer_address.lower() != sender_address.lower():
+            raise PermissionError(f"Account {sender_address} is not the manufacturer of part {part_id_hex} and cannot extend its warranty.")
+
+        func = self.contract.functions.extendWarranty(
+            part_id_bytes,
+            additional_days * 24 * 60 * 60,
+        )
+        try:
+            tx_hash = self._send_transaction(func, sender_account)
+            receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+            return tx_hash.hex()
+        except Exception as e:
+            raise Exception(f"Failed to extend warranty: {str(e)}")
 
     # === READ METHODS ===
 
@@ -268,7 +295,7 @@ class MaritimeManager:
         if not self.web3.is_address(manufacturer_address):
             raise ValueError(f"Invalid manufacturer Ethereum address: {manufacturer_address}")
         try:
-            manufacturer_address = self.web3.to_checksum_address(manufacturer_address) # Ensure checksum format
+            manufacturer_address = self.web3.to_checksum_address(manufacturer_address)  # Ensure checksum format
         except Exception:
             raise ValueError(f"Could not normalize address: {manufacturer_address}")
 
@@ -278,7 +305,6 @@ class MaritimeManager:
         except Exception as e:
             raise Exception(f"Failed to get part ID: {str(e)}")
 
-
     def get_all_parts(self):
         all_parts = []
         try:
@@ -286,13 +312,15 @@ class MaritimeManager:
             logs = event_filter.get_all_entries()
 
             for log in logs:
-                args = log['args']
-                all_parts.append({
-                    "part_id": "0x" + args.partId.hex(),
-                    "part_name": args.partName,
-                    "manufacturer": args.manufacturer,
-                    "serial_number": args.serialNumber,
-                })
+                args = log["args"]
+                all_parts.append(
+                    {
+                        "part_id": "0x" + args.partId.hex(),
+                        "part_name": args.partName,
+                        "manufacturer": args.manufacturer,
+                        "serial_number": args.serialNumber,
+                    }
+                )
 
             return all_parts[::-1]  # Sort by most recent
         except Exception as e:
@@ -301,7 +329,9 @@ class MaritimeManager:
     def get_part_details(self, manufacturer_address: str, serial_number: str):
         try:
             part_id_hex = self.get_part_id(manufacturer_address, serial_number)
-            part_data = self.contract.functions.parts(bytes.fromhex(part_id_hex[2:] if part_id_hex.startswith("0x") else part_id_hex)).call()
+            part_data = self.contract.functions.parts(
+                bytes.fromhex(part_id_hex[2:] if part_id_hex.startswith("0x") else part_id_hex)
+            ).call()
 
             if part_data[7] is False:  # exists flag
                 return None
@@ -314,7 +344,7 @@ class MaritimeManager:
                 "manufacture_date": self._format_date(part_data[3]),
                 "warranty_expiry": self._format_date(part_data[4]),
                 "vessel_id": part_data[5],
-                "certificate_hash": part_data[6]
+                "certificate_hash": part_data[6],
             }
         except ValueError as ve:
             raise ve
@@ -329,14 +359,16 @@ class MaritimeManager:
             formatted_history = []
             for event in raw_history:
                 service_provider, service_timestamp, service_type, service_protocol_hash = event
-                formatted_history.append({
-                    "service_provider": service_provider,
-                    "service_date": self._format_date(service_timestamp),
-                    "service_type": service_type,
-                    "service_protocol_hash": service_protocol_hash
-                })
+                formatted_history.append(
+                    {
+                        "service_provider": service_provider,
+                        "service_date": self._format_date(service_timestamp),
+                        "service_type": service_type,
+                        "service_protocol_hash": service_protocol_hash,
+                    }
+                )
 
-            return formatted_history[::-1] # Return in reverse chronological order
+            return formatted_history[::-1]  # Return in reverse chronological order
         except Exception as e:
             raise Exception(f"Failed to get part history: {str(e)}")
 
@@ -375,11 +407,6 @@ class MaritimeManager:
                     print(f"Warning: Could not check warranty status for part {part['part_id']}: {e}")
                     continue
 
-            return {
-                "total_parts": len(all_parts),
-                "active_warranties": active_warranties,
-                "expired_warranties": expired_warranties
-            }
+            return {"total_parts": len(all_parts), "active_warranties": active_warranties, "expired_warranties": expired_warranties}
         except Exception as e:
             raise Exception(f"Failed to get system statistics: {str(e)}")
-
