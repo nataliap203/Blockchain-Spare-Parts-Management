@@ -9,6 +9,7 @@ from src.app.utils.transfer import transfer_vtho
 
 CONFIG_FILE = os.getenv("DEPLOYMENT_OUTPUT_FILE", "data/deployment_details.json")
 
+
 class MaritimeManager:
     def __init__(self, config_file: str = CONFIG_FILE):
         self.SYSTEM_ROLES = ["OPERATOR", "OEM", "SERVICE"]
@@ -24,7 +25,7 @@ class MaritimeManager:
                 full_path = "deployment_details.json"
             else:
                 raise FileNotFoundError(f"Configuration file at {full_path} not found.")
-        with open(full_path, 'r') as file:
+        with open(full_path, "r") as file:
             details = json.load(file)
 
         self.contract_address = details["address"]
@@ -76,11 +77,7 @@ class MaritimeManager:
             operator_pk = "0x" + operator_pk
 
         try:
-            tx_id = transfer_vtho(
-                sender_pk=operator_pk,
-                to_address=target_address,
-                amount_vtho=amount_vtho
-            )
+            tx_id = transfer_vtho(sender_pk=operator_pk, to_address=target_address, amount_vtho=amount_vtho)
             receipt = wait_for_receipt(tx_id)
             if receipt is None:
                 raise Exception("Funding transaction failed.")
@@ -104,19 +101,13 @@ class MaritimeManager:
                 if existing_role == role_name:
                     raise ValueError(f"User {target_account_address} already has role {role_name}.")
                 else:
-                    raise ValueError(f"Conflict: User {target_account_address} already has role {existing_role}, cannot assign role {role_name}.")
+                    raise ValueError(
+                        f"Conflict: User {target_account_address} already has role {existing_role}, cannot assign role {role_name}."
+                    )
 
         try:
-            role_bytes = call_contract(
-                self.contract_address, self.abi, f"ROLE_{role_name.upper()}", []
-            )
-            tx_id = send_transaction(
-                self.contract_address,
-                self.abi,
-                "grantRole",
-                [role_bytes, target_account_address],
-                sender_pk
-            )
+            role_bytes = call_contract(self.contract_address, self.abi, f"ROLE_{role_name.upper()}", [])
+            tx_id = send_transaction(self.contract_address, self.abi, "grantRole", [role_bytes, target_account_address], sender_pk)
             receipt = wait_for_receipt(tx_id)
             if receipt is None:
                 raise Exception("Transaction to grant role failed.")
@@ -134,15 +125,8 @@ class MaritimeManager:
             raise ValueError(f"Role '{role_name}' does not exist in the system.")
 
         try:
-            role_bytes = call_contract(
-                self.contract_address, self.abi, f"ROLE_{role_name.upper()}", []
-            )
-            result = call_contract(
-                self.contract_address,
-                self.abi,
-                "roles",
-                [role_bytes, address_to_check]
-            )
+            role_bytes = call_contract(self.contract_address, self.abi, f"ROLE_{role_name.upper()}", [])
+            result = call_contract(self.contract_address, self.abi, "roles", [role_bytes, address_to_check])
             return result
         except Exception as e:
             raise Exception(f"Failed to check role: {e}")
@@ -161,16 +145,8 @@ class MaritimeManager:
             raise ValueError(f"Address {target_account} does not have role {role_name}.")
 
         try:
-            role_bytes = call_contract(
-                self.contract_address, self.abi, f"ROLE_{role_name.upper()}", []
-            )
-            tx_id = send_transaction(
-                self.contract_address,
-                self.abi,
-                "revokeRole",
-                [role_bytes, target_account],
-                sender_pk
-            )
+            role_bytes = call_contract(self.contract_address, self.abi, f"ROLE_{role_name.upper()}", [])
+            tx_id = send_transaction(self.contract_address, self.abi, "revokeRole", [role_bytes, target_account], sender_pk)
             receipt = wait_for_receipt(tx_id)
             if receipt is None:
                 raise Exception("Transaction to revoke role failed.")
@@ -183,7 +159,9 @@ class MaritimeManager:
 
     # === TRANSACTION METHODS ====
 
-    def register_part(self, sender_pk: str, part_name: str, serial_number: str, warranty_days: int, vessel_id: str, certificate_hash: str) -> str:
+    def register_part(
+        self, sender_pk: str, part_name: str, serial_number: str, warranty_days: int, vessel_id: str, certificate_hash: str
+    ) -> str:
         sender_address = private_key_to_address(sender_pk)
         if not self.check_role(sender_address, "OEM"):
             raise PermissionError(f"Account {sender_address} lacks OEM role required to register parts.")
@@ -191,9 +169,7 @@ class MaritimeManager:
         # Check if part with same serial number already exists for this OEM to prevent sending transaction that will revert
         part_id = self.get_part_id(sender_address, serial_number)
         part_id_bytes = bytes.fromhex(part_id[2:] if part_id.startswith("0x") else part_id)
-        part_data = call_contract(
-            self.contract_address, self.abi, "parts", [part_id_bytes]
-        )
+        part_data = call_contract(self.contract_address, self.abi, "parts", [part_id_bytes])
         exists = part_data[7]
         if exists:
             raise ValueError(f"Part with serial number {serial_number} is already registered by this OEM.")
@@ -204,7 +180,7 @@ class MaritimeManager:
                 self.abi,
                 "registerPart",
                 [part_name, serial_number, warranty_days * 24 * 60 * 60, vessel_id, certificate_hash],
-                sender_pk
+                sender_pk,
             )
             receipt = wait_for_receipt(tx_id)
             if receipt is None or receipt.get("reverted") is True:
@@ -220,23 +196,16 @@ class MaritimeManager:
         if not (self.check_role(sender_address, "SERVICE") or self.check_role(sender_address, "OPERATOR")):
             raise PermissionError(f"Account {sender_address} lacks SERVICE or OPERATOR role required to log service events.")
 
-
         # Verify that the part exists to prevent sending transaction that will revert
         part_id_bytes = self._validate_part_id_format(part_id_hex)
-        part_data = call_contract(
-            self.contract_address, self.abi, "parts", [part_id_bytes]
-        )
+        part_data = call_contract(self.contract_address, self.abi, "parts", [part_id_bytes])
         exists = part_data[7]
         if not exists:
             raise ValueError(f"Part with ID {part_id_hex} does not exist in the registry.")
 
         try:
             tx_id = send_transaction(
-                self.contract_address,
-                self.abi,
-                "logServiceEvent",
-                [part_id_bytes, service_type, service_protocol_hash],
-                sender_pk
+                self.contract_address, self.abi, "logServiceEvent", [part_id_bytes, service_type, service_protocol_hash], sender_pk
             )
             receipt = wait_for_receipt(tx_id)
             if receipt is None or receipt.get("reverted") is True:
@@ -255,9 +224,10 @@ class MaritimeManager:
         part_id_bytes = self._validate_part_id_format(part_id_hex)
 
         # Verify that the part exists to prevent sending transaction that will revert
-        part_data = call_contract(
-            self.contract_address, self.abi, "parts", [part_id_bytes]
-        )
+        part_data = call_contract(self.contract_address, self.abi, "parts", [part_id_bytes])
+        manufacturer = part_data[1]
+        if manufacturer.lower() != sender_address.lower():
+            raise PermissionError("Only the OEM that registered the part can extend its warranty.")
         exists = part_data[7]
         if not exists:
             raise ValueError(f"Part with ID {part_id_hex} does not exist in the registry.")
@@ -265,13 +235,7 @@ class MaritimeManager:
         additional_seconds = additional_days * 24 * 60 * 60
 
         try:
-            tx_id = send_transaction(
-                self.contract_address,
-                self.abi,
-                "extendWarranty",
-                [part_id_bytes, additional_seconds],
-                sender_pk
-            )
+            tx_id = send_transaction(self.contract_address, self.abi, "extendWarranty", [part_id_bytes, additional_seconds], sender_pk)
             receipt = wait_for_receipt(tx_id)
             if receipt is None or receipt.get("reverted") is True:
                 raise Exception("Transaction to extend warranty failed.")
@@ -284,26 +248,26 @@ class MaritimeManager:
 
     def get_all_parts(self) -> List[Dict]:
         try:
-            logs = fetch_events(
-                self.contract_address, self.abi, "PartRegistered"
-            )
+            logs = fetch_events(self.contract_address, self.abi, "PartRegistered")
 
             all_parts = []
             for log in logs:
-                args = log['args']
-                part_id = args['partId']
+                args = log["args"]
+                part_id = args["partId"]
 
                 if isinstance(part_id, bytes):
                     part_id = part_id.hex()
                 if isinstance(part_id, str) and not part_id.startswith("0x"):
                     part_id = "0x" + part_id
 
-                all_parts.append({
-                    "part_id": part_id,
-                    "part_name": args['partName'],
-                    "manufacturer": args['manufacturer'],
-                    "serial_number": args['serialNumber']
-                })
+                all_parts.append(
+                    {
+                        "part_id": part_id,
+                        "part_name": args["partName"],
+                        "manufacturer": args["manufacturer"],
+                        "serial_number": args["serialNumber"],
+                    }
+                )
             return all_parts[::-1]  # Sort by most recent
         except Exception as e:
             raise Exception(f"Failed to fetch parts list from blockchain: {str(e)}")
@@ -311,10 +275,8 @@ class MaritimeManager:
     def get_part_id(self, manufacturer_address: str, serial_number: str):
         self._validate_address(manufacturer_address)
         try:
-            part_id = call_contract(
-                self.contract_address, self.abi, "getPartId", [manufacturer_address, serial_number]
-            )
-            return '0x' + part_id.hex()
+            part_id = call_contract(self.contract_address, self.abi, "getPartId", [manufacturer_address, serial_number])
+            return "0x" + part_id.hex()
         except Exception as e:
             if "AddressEncoder" in str(e) or "cannot be encoded" in str(e):
                 raise ValueError(f"Invalid manufacturer address format: {manufacturer_address}.")
@@ -325,13 +287,11 @@ class MaritimeManager:
             part_id_hex = self.get_part_id(manufacturer_address, serial_number)
             part_id_bytes = bytes.fromhex(part_id_hex[2:] if part_id_hex.startswith("0x") else part_id_hex)
 
-            part_data = call_contract(
-                self.contract_address, self.abi, "parts", [part_id_bytes]
-            )
+            part_data = call_contract(self.contract_address, self.abi, "parts", [part_id_bytes])
             if isinstance(part_data, dict):
                 part_data = [part_data[str(i)] for i in range(len(part_data))]
 
-            if part_data[7] is False: # exists flag
+            if part_data[7] is False:  # exists flag
                 return None
 
             return {
@@ -353,20 +313,20 @@ class MaritimeManager:
         part_id_bytes = self._validate_part_id_format(part_id_hex)
 
         try:
-            raw_history = call_contract(
-                self.contract_address, self.abi, "getPartHistory", [part_id_bytes]
-            )
+            raw_history = call_contract(self.contract_address, self.abi, "getPartHistory", [part_id_bytes])
             formatted_history = []
             for event in raw_history:
                 service_provider, service_timestamp, service_type, service_protocol_hash = event
-                formatted_history.append({
-                    "service_provider": service_provider,
-                    "service_date": self._format_date(service_timestamp),
-                    "service_type": service_type,
-                    "service_protocol_hash": service_protocol_hash
-                })
+                formatted_history.append(
+                    {
+                        "service_provider": service_provider,
+                        "service_date": self._format_date(service_timestamp),
+                        "service_type": service_type,
+                        "service_protocol_hash": service_protocol_hash,
+                    }
+                )
 
-            return formatted_history[::-1] # Return in reverse chronological order
+            return formatted_history[::-1]  # Return in reverse chronological order
         except Exception as e:
             raise Exception(f"Failed to get part history: {str(e)}")
 
@@ -374,9 +334,7 @@ class MaritimeManager:
         part_id_bytes = self._validate_part_id_format(part_id_hex)
 
         try:
-            status = call_contract(
-                self.contract_address, self.abi, "checkWarrantyStatus", [part_id_bytes]
-            )
+            status = call_contract(self.contract_address, self.abi, "checkWarrantyStatus", [part_id_bytes])
         except Exception as e:
             if "part not registered" in str(e).lower() or "reverted" in str(e).lower():
                 raise ValueError("Part does not exist in the system.")
@@ -409,10 +367,6 @@ class MaritimeManager:
                     print(f"Warning: Could not check warranty status for part {part['part_id']}: {e}")
                     continue
 
-            return {
-                "total_parts": len(all_parts),
-                "active_warranties": active_warranties,
-                "expired_warranties": expired_warranties
-            }
+            return {"total_parts": len(all_parts), "active_warranties": active_warranties, "expired_warranties": expired_warranties}
         except Exception as e:
             raise Exception(f"Failed to get system statistics: {str(e)}")
