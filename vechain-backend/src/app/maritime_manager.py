@@ -48,6 +48,10 @@ class MaritimeManager:
         return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M")
 
     def _validate_address(self, address: str):
+        """Validate a VeChain address format.
+        Args:
+            address (str): The address to validate.
+        """
         if not address or not isinstance(address, str):
             raise ValueError("Address must be a non-empty string.")
 
@@ -55,6 +59,12 @@ class MaritimeManager:
             raise ValueError(f"Invalid address format: {address}")
 
     def _validate_part_id_format(self, part_id_hex: str) -> bytes:
+        """Validate and convert a part ID from hex string to bytes.
+        Args:
+            part_id_hex (str): The part ID in hexadecimal string format.
+        Returns:
+            bytes: The part ID in bytes.
+        """
         clean_hex = part_id_hex.strip().lower()
         clean_hex = clean_hex[2:] if clean_hex.startswith("0x") else clean_hex
 
@@ -68,6 +78,13 @@ class MaritimeManager:
         return bytes.fromhex(clean_hex)
 
     def fund_account(self, target_address: str, amount_vtho: float = 50.0) -> str:
+        """Fund a VeChain account with VTHO tokens from the operator account.
+        Args:
+            target_address (str): The address to fund.
+            amount_vtho (float): The amount of VTHO to send.
+        Returns:
+            str: The transaction ID of the funding transaction.
+        """
         operator_pk = os.getenv("OPERATOR_PRIVATE_KEY")
         if operator_pk is None:
             print("OPERATOR_PRIVATE_KEY not set. Cannot fund account.")
@@ -92,6 +109,14 @@ class MaritimeManager:
     # === ACCESS CONTROL ===
 
     def grant_role(self, sender_pk, role_name: str, target_account_address: str):
+        """Grant a system role to a target account.
+        Args:
+            sender_pk (str): The private key of the account granting the role.
+            role_name (str): The name of the role to grant.
+            target_account_address (str): The address of the account to receive the role.
+        Returns:
+            str: The transaction ID of the grant role transaction.
+        """
         self._validate_address(target_account_address)
         if role_name.upper() not in self.SYSTEM_ROLES:
             raise ValueError(f"Role '{role_name}' does not exist in the system.")
@@ -119,6 +144,13 @@ class MaritimeManager:
             raise e
 
     def check_role(self, address_to_check: str, role_name: str) -> bool:
+        """Check if an address has a specific system role.
+        Args:
+            address_to_check (str): The address to check.
+            role_name (str): The name of the role to check.
+        Returns:
+            bool: True if the address has the role, False otherwise.
+        """
         self._validate_address(address_to_check)
 
         if role_name.upper() not in self.SYSTEM_ROLES:
@@ -132,6 +164,14 @@ class MaritimeManager:
             raise Exception(f"Failed to check role: {e}")
 
     def revoke_role(self, sender_pk, role_name: str, target_account: str):
+        """Revoke a system role from a target account.
+        Args:
+            sender_pk (str): The private key of the account revoking the role.
+            role_name (str): The name of the role to revoke.
+            target_account (str): The address of the account to lose the role.
+        Returns:
+            str: The transaction ID of the revoke role transaction.
+        """
         self._validate_address(target_account)
 
         sender_address = private_key_to_address(sender_pk)
@@ -162,6 +202,17 @@ class MaritimeManager:
     def register_part(
         self, sender_pk: str, part_name: str, serial_number: str, warranty_days: int, vessel_id: str, certificate_hash: str
     ) -> str:
+        """Register a new part in the system.
+        Args:
+            sender_pk (str): The private key of the account registering the part.
+            part_name (str): The name of the part.
+            serial_number (str): The serial number of the part.
+            warranty_days (int): The warranty period in days.
+            vessel_id (str): The ID of the vessel where the part is installed.
+            certificate_hash (str): The hash of the part's certificate.
+        Returns:
+            str: The transaction ID of the register part transaction.
+        """
         sender_address = private_key_to_address(sender_pk)
         if not self.check_role(sender_address, "OEM"):
             raise PermissionError(f"Account {sender_address} lacks OEM role required to register parts.")
@@ -191,6 +242,15 @@ class MaritimeManager:
             raise Exception(f"Failed to register part: {str(e)}")
 
     def log_service_event(self, sender_pk: str, part_id_hex: str, service_type: str, service_protocol_hash: str) -> str:
+        """Log a service event for a part.
+        Args:
+            sender_pk (str): The private key of the account logging the event.
+            part_id_hex (str): The part ID in hexadecimal string format.
+            service_type (str): The type of service performed.
+            service_protocol_hash (str): The hash of the service protocol document.
+        Returns:
+            str: The transaction ID of the log service event transaction.
+        """
         sender_address = private_key_to_address(sender_pk)
 
         if not (self.check_role(sender_address, "SERVICE") or self.check_role(sender_address, "OPERATOR")):
@@ -216,6 +276,14 @@ class MaritimeManager:
             raise Exception(f"Failed to log service event: {str(e)}")
 
     def extend_warranty(self, sender_pk: str, part_id_hex: str, additional_days: int) -> str:
+        """Extend the warranty period of a part.
+        Args:
+            sender_pk (str): The private key of the account extending the warranty.
+            part_id_hex (str): The part ID in hexadecimal string format.
+            additional_days (int): The number of additional days to extend the warranty.
+        Returns:
+            str: The transaction ID of the extend warranty transaction.
+        """
         sender_address = private_key_to_address(sender_pk)
 
         if not self.check_role(sender_address, "OEM"):
@@ -247,6 +315,10 @@ class MaritimeManager:
     # === READ METHODS ===
 
     def get_all_parts(self) -> List[Dict]:
+        """Retrieve a list of all registered parts in the system.
+        Returns:
+            List[Dict]: A list of dictionaries containing part details.
+        """
         try:
             logs = fetch_events(self.contract_address, self.abi, "PartRegistered")
 
@@ -273,6 +345,13 @@ class MaritimeManager:
             raise Exception(f"Failed to fetch parts list from blockchain: {str(e)}")
 
     def get_part_id(self, manufacturer_address: str, serial_number: str):
+        """Get the part ID for a given manufacturer and serial number.
+        Args:
+            manufacturer_address (str): The address of the part's manufacturer (OEM).
+            serial_number (str): The serial number of the part.
+        Returns:
+            str: The part ID in hexadecimal string format.
+        """
         self._validate_address(manufacturer_address)
         try:
             part_id = call_contract(self.contract_address, self.abi, "getPartId", [manufacturer_address, serial_number])
@@ -283,6 +362,13 @@ class MaritimeManager:
             raise Exception(f"Failed to get part ID: {str(e)}")
 
     def get_part_details(self, manufacturer_address: str, serial_number: str) -> Dict[str, Any]:
+        """Retrieve detailed information about a specific part.
+        Args:
+            manufacturer_address (str): The address of the part's manufacturer (OEM).
+            serial_number (str): The serial number of the part.
+        Returns:
+            Dict[str, Any]: A dictionary containing part details.
+        """
         try:
             part_id_hex = self.get_part_id(manufacturer_address, serial_number)
             part_id_bytes = bytes.fromhex(part_id_hex[2:] if part_id_hex.startswith("0x") else part_id_hex)
@@ -310,6 +396,12 @@ class MaritimeManager:
             raise Exception(f"Failed to get part details: {str(e)}")
 
     def get_part_history(self, part_id_hex: str):
+        """Retrieve the service history of a specific part.
+        Args:
+            part_id_hex (str): The part ID in hexadecimal string format.
+        Returns:
+            List[Dict]: A list of dictionaries containing service event details.
+        """
         part_id_bytes = self._validate_part_id_format(part_id_hex)
 
         try:
@@ -331,6 +423,13 @@ class MaritimeManager:
             raise Exception(f"Failed to get part history: {str(e)}")
 
     def check_warranty_status(self, part_id_hex: str):
+        """Check the warranty status of a specific part.
+        Args:
+            part_id_hex (str): The part ID in hexadecimal string format.
+        Returns:
+            Tuple[bool, int]: A tuple where the first element indicates if the warranty is valid,
+                              and the second element is the number of days left (0 if expired).
+        """
         part_id_bytes = self._validate_part_id_format(part_id_hex)
 
         try:
@@ -350,6 +449,10 @@ class MaritimeManager:
     # === STATISTICS ===
 
     def get_system_statistics(self):
+        """Retrieve overall system statistics.
+        Returns:
+            Dict[str, int]: A dictionary containing total parts, active warranties, and expired warranties.
+        """
         try:
             all_parts = self.get_all_parts()
 

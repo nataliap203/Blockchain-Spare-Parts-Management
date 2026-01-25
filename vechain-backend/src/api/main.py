@@ -45,6 +45,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)) -> User:
+    """Decode JWT token and retrieve the current user."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
@@ -76,6 +77,7 @@ def root():
 
 @app.post("/register")
 def register(user_data: UserCreateRequest, session: Session = Depends(get_session)):
+    """Register a new user and create a wallet for them."""
     email = user_data.email
     password = user_data.password
     existing_user = session.exec(select(User).where(User.email == email)).first()
@@ -131,6 +133,7 @@ def get_accounts(session: Session = Depends(get_session)):
 
 @app.post("/admin/grant-role")
 def grant_role(request: RoleGrantRequest, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    """Grant a role to a user account."""
     try:
         sender_pk = decrypt_private_key(current_user.encrypted_private_key)
         tx_id = manager.grant_role(sender_pk=sender_pk, role_name=request.role_name, target_account_address=request.target_address)
@@ -155,6 +158,7 @@ def grant_role(request: RoleGrantRequest, current_user: User = Depends(get_curre
 
 @app.post("/admin/revoke-role")
 def revoke_role(request: RoleGrantRequest, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    """Revoke a role from a user account."""
     try:
         sender_pk = decrypt_private_key(current_user.encrypted_private_key)
         tx_id = manager.revoke_role(sender_pk=sender_pk, role_name=request.role_name, target_account=request.target_address)
@@ -180,6 +184,7 @@ def revoke_role(request: RoleGrantRequest, current_user: User = Depends(get_curr
 
 @app.get("/admin/check-role/{address}/{role_name}")
 def check_role(address: str, role_name: str):
+    """Check if an address has a specific role."""
     try:
         has_role = manager.check_role(address_to_check=address, role_name=role_name)
         return {"address": address, "role": role_name, "has_role": has_role}
@@ -194,6 +199,7 @@ def check_role(address: str, role_name: str):
 
 @app.get("/parts")
 def get_all_parts():
+    """Retrieve all registered parts in the system."""
     try:
         parts = manager.get_all_parts()
         return {"parts": parts}
@@ -203,6 +209,7 @@ def get_all_parts():
 
 @app.get("/parts/{manufacturer}/{serial_number}")
 def get_part(manufacturer: str, serial_number: str):
+    """Retrieve details of a specific part by manufacturer and serial number."""
     try:
         part_details = manager.get_part_details(manufacturer_address=manufacturer, serial_number=serial_number)
         if part_details is None:
@@ -216,6 +223,7 @@ def get_part(manufacturer: str, serial_number: str):
 
 @app.get("/history/{part_id_hex}")
 def get_part_history(part_id_hex: str):
+    """Retrieve the service history of a specific part by its ID."""
     try:
         part_history = manager.get_part_history(part_id_hex=part_id_hex)
         return {"part_history": part_history}
@@ -225,6 +233,7 @@ def get_part_history(part_id_hex: str):
 
 @app.get("/warranty/{part_id_hex}")
 def check_warranty(part_id_hex: str):
+    """Check the warranty status of a specific part by its ID."""
     try:
         is_valid, days_left = manager.check_warranty_status(part_id_hex=part_id_hex)
         return {"part_id": part_id_hex, "is_valid": is_valid, "days_left": days_left}
@@ -237,6 +246,7 @@ def check_warranty(part_id_hex: str):
 
 @app.post("/parts/register")
 def register_part(request: RegisterPartRequest, current_user: User = Depends(get_current_user)):
+    """Register a new part in the system."""
     try:
         if request.sender_address != current_user.wallet_address:
             raise HTTPException(status_code=403, detail="Wallet mismatch: Sender address does not match authenticated user.")
@@ -267,6 +277,7 @@ def register_part(request: RegisterPartRequest, current_user: User = Depends(get
 
 @app.post("/log_service")
 def log_service_event(request: LogServiceEventRequest, current_user: User = Depends(get_current_user)):
+    """Log a service event for a specific part."""
     try:
         if request.sender_address != current_user.wallet_address:
             raise HTTPException(status_code=403, detail="Sender address does not match authenticated user.")
@@ -292,6 +303,7 @@ def log_service_event(request: LogServiceEventRequest, current_user: User = Depe
 # === EXTEND WARRANTY ===
 @app.post("/parts/extend-warranty")
 def extend_warranty(request: ExtendWarrantyRequest, current_user: User = Depends(get_current_user)):
+    """Extend the warranty of a specific part."""
     try:
         if request.sender_address != current_user.wallet_address:
             raise HTTPException(status_code=403, detail="Sender address does not match authenticated user.")
@@ -314,6 +326,7 @@ def extend_warranty(request: ExtendWarrantyRequest, current_user: User = Depends
 
 @app.get("/statistics")
 def get_statistics():
+    """Retrieve system statistics."""
     try:
         statistics = manager.get_system_statistics()
         return {"statistics": statistics}

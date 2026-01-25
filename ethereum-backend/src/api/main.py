@@ -45,6 +45,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)) -> User:
+    """Decode JWT token and retrieve the current user."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
@@ -60,6 +61,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Dep
 
 
 def get_custodial_account(user: User) -> Account:
+    """Decrypt user's private key and return an Account object."""
     try:
         private_key = decrypt_private_key(user.encrypted_private_key)
         if not private_key.startswith("0x"):
@@ -75,11 +77,6 @@ def get_custodial_account(user: User) -> Account:
 
 @app.get("/")
 def read_root():
-    """Root endpoint to check API status.
-
-    Returns:
-        dict: Status message and backend information.
-    """
     if manager is None:
         return {"status": "Blockchain API is running, but manager is not initialized.", "service": "Ethereum", "active_network": "N/A"}
 
@@ -99,6 +96,7 @@ def read_root():
 
 @app.post("/register")
 def register(user_data: UserCreateRequest, session: Session = Depends(get_session)):
+    """Register a new user and create a wallet for them."""
     email = user_data.email
     password = user_data.password
     existing_user = session.exec(select(User).where(User.email == email)).first()
@@ -151,12 +149,14 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = D
 # === ACCOUNTS MANAGEMENT ===
 @app.get("/accounts")
 def get_accounts(session: Session = Depends(get_session)):
+    """Retrieve all registered user wallet addresses."""
     users = session.exec(select(User)).all()
     return {"accounts": [user.wallet_address for user in users]}
 
 
 @app.post("/admin/grant-role")
 def grant_role(request: RoleRequest, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    """Grant a role to a user account."""
     try:
         sender_account = get_custodial_account(current_user)
         tx_hash_str = manager.grant_role(sender_account=sender_account, role_name=request.role_name, target_address=request.target_address)
@@ -181,6 +181,7 @@ def grant_role(request: RoleRequest, current_user: User = Depends(get_current_us
 
 @app.post("/admin/revoke-role")
 def revoke_role(request: RoleRequest, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    """Revoke a role from a user account."""
     try:
         sender_account = get_custodial_account(current_user)
         tx_hash_str = manager.revoke_role(sender_account=sender_account, role_name=request.role_name, target_address=request.target_address)
@@ -207,14 +208,7 @@ def revoke_role(request: RoleRequest, current_user: User = Depends(get_current_u
 
 @app.get("/admin/check-role/{address}/{role_name}")
 def check_role(address: str, role_name: str):
-    """Check if a specific address has a given role.
-
-    Args:
-        address (str): The blockchain address to check.
-        role_name (str): The name of the role to verify.
-    Returns:
-        dict: A dictionary indicating whether the address has the role.
-    """
+    """Check if an address has a specific role."""
     try:
         has_role = manager.check_role(address_to_check=address, role_name=role_name)
         return {"address": address, "role": role_name, "has_role": has_role}
@@ -229,11 +223,7 @@ def check_role(address: str, role_name: str):
 
 @app.get("/parts")
 def get_all_parts():
-    """Retrieve all registered parts.
-
-    Returns:
-        dict: A dictionary containing a list of all parts.
-    """
+    """Retrieve all registered parts in the system."""
     try:
         parts = manager.get_all_parts()
         return {"parts": parts}
@@ -243,17 +233,7 @@ def get_all_parts():
 
 @app.get("/parts/{manufacturer}/{serial_number}")
 def get_part(manufacturer: str, serial_number: str):
-    """Retrieve details of a specific part based on manufacturer and serial number.
-
-    Args:
-        manufacturer (str): The name of the manufacturer.
-        serial_number (str): The serial number of the part.
-    Raises:
-        HTTPException: If the part is not found.
-
-    Returns:
-        dict: Details of the requested part.
-    """
+    """Retrieve details of a specific part by manufacturer and serial number."""
     try:
         part_details = manager.get_part_details(manufacturer, serial_number)
         if part_details is None:
@@ -267,14 +247,7 @@ def get_part(manufacturer: str, serial_number: str):
 
 @app.get("/history/{part_id_hex}")
 def get_part_history(part_id_hex: str):
-    """Retrieve the service history of a specific part.
-
-    Args:
-        part_id (str): The unique identifier of the part (hex).
-
-    Returns:
-        dict: Service history of the specified part.
-    """
+    """Retrieve the service history of a specific part by its ID."""
     try:
         part_history = manager.get_part_history(part_id_hex=part_id_hex)
         return {"part_history": part_history}
@@ -284,14 +257,7 @@ def get_part_history(part_id_hex: str):
 
 @app.get("/warranty/{part_id_hex}")
 def check_warranty(part_id_hex: str):
-    """Check the warranty status of a specific part.
-
-    Args:
-        part_id (str): The unique identifier of the part (hex).
-
-    Returns:
-        dict: Warranty status including validity and days left.
-    """
+    """Check the warranty status of a specific part by its ID."""
     try:
         is_valid, days_left = manager.check_warranty_status(part_id_hex=part_id_hex)
         return {"part_id": part_id_hex, "is_valid": is_valid, "days_left": days_left}
@@ -304,18 +270,7 @@ def check_warranty(part_id_hex: str):
 
 @app.post("/parts/register")
 def register_part(request: RegisterPartRequest, current_user: User = Depends(get_current_user)):
-    """Register a new spare part.
-
-    Args:
-        part (RegisterPartRequest): The details of the part to register.
-        current_user (User): The currently authenticated user.
-
-    Raises:
-        HTTPException: If registration fails.
-
-    Returns:
-        dict: Status of the registration including transaction hash and part ID.
-    """
+    """Register a new part in the system."""
     try:
         sender_account = get_custodial_account(current_user)
         if request.sender_address != current_user.wallet_address:
@@ -346,18 +301,7 @@ def register_part(request: RegisterPartRequest, current_user: User = Depends(get
 
 @app.post("/log_service")
 def log_service_event(request: LogServiceEventRequest, current_user: User = Depends(get_current_user)):
-    """Log a service event for a specific part.
-
-    Args:
-        request (LogServiceEventRequest): The details of the service event.
-        current_user (User): The currently authenticated user.
-
-    Raises:
-        HTTPException: If logging the service event fails.
-
-    Returns:
-        dict: Status of the logging including transaction hash.
-    """
+    """Log a service event for a specific part."""
     try:
         sender_account = get_custodial_account(current_user)
         if request.sender_address != current_user.wallet_address:
@@ -383,6 +327,7 @@ def log_service_event(request: LogServiceEventRequest, current_user: User = Depe
 # === EXTEND WARRANTY ===
 @app.post("/parts/extend-warranty")
 def extend_warranty(request: ExtendWarrantyRequest, current_user: User = Depends(get_current_user)):
+    """Extend the warranty of a specific part."""
     try:
         sender_account = get_custodial_account(current_user)
         if request.sender_address != current_user.wallet_address:
@@ -407,11 +352,7 @@ def extend_warranty(request: ExtendWarrantyRequest, current_user: User = Depends
 
 @app.get("/statistics")
 def get_stats():
-    """Retrieve basic statistics about the spare parts management system.
-
-    Returns:
-        dict: A dictionary containing various statistics.
-    """
+    """Retrieve system statistics."""
     try:
         stats = manager.get_system_statistics()
         return {"statistics": stats}

@@ -24,6 +24,7 @@ class ExtendWarrantyRequest(BaseModel):
     part_id_hex: str
     additional_days: int
 
+
 class RoleGrantRequest(BaseModel):
     sender_address: str
     role_name: str
