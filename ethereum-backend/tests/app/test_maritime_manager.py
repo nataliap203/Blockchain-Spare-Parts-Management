@@ -515,8 +515,8 @@ def test_register_part_success(mock_manager, mocker):
     mocker.patch.object(mock_manager, "check_role", return_value=True)
 
     mocker.patch.object(mock_manager, "get_part_id", return_value="0x" + "a" * 64)
-    mock_part_data = [None] * 8
-    mock_part_data[7] = False  # exists flag
+    mock_part_data = [None] * 7
+    mock_part_data[6] = False  # exists flag
     mock_manager.contract.functions.parts.return_value.call.return_value = mock_part_data
 
     mock_tx = MagicMock()
@@ -524,7 +524,7 @@ def test_register_part_success(mock_manager, mocker):
     mocker.patch.object(mock_manager, "_send_transaction", return_value=mock_tx)
     mock_manager.web3.eth.wait_for_transaction_receipt.return_value = {"status": 1}
 
-    result = mock_manager.register_part(sender_account, "Engine", "SN12345", 365, "Vessel-A", "QmHash123")
+    result = mock_manager.register_part(sender_account, "Engine", "SN12345", 365, "QmHash123")
 
     assert result == "0xRegTxHash"
     mock_manager.contract.functions.registerPart.assert_called_once()
@@ -544,7 +544,7 @@ def test_register_part_permission_denied(mock_manager, mocker):
     mocker.patch.object(mock_manager, "check_role", return_value=False)
 
     with pytest.raises(PermissionError, match="lacks OEM role"):
-        mock_manager.register_part(sender_account, "Part", "SN", 10, "V", "H")
+        mock_manager.register_part(sender_account, "Part", "SN", 10, "H")
 
 
 def test_register_part_already_exists(mock_manager, mocker):
@@ -558,11 +558,11 @@ def test_register_part_already_exists(mock_manager, mocker):
     mocker.patch.object(mock_manager, "get_part_id", return_value="0x" + "b" * 64)
 
     # Simulate exists=True (Index 7)
-    mock_part_data = ["PartName", "0xManuf", "SN123", 0, 0, "", "", True]
+    mock_part_data = ["PartName", "0xManuf", "SN123", 0, 0, "", True]
     mock_manager.contract.functions.parts.return_value.call.return_value = mock_part_data
 
     with pytest.raises(ValueError, match="already registered"):
-        mock_manager.register_part(sender_account, "Part", "SN123", 10, "V", "H")
+        mock_manager.register_part(sender_account, "Part", "SN123", 10, "H")
 
 
 # -- Test log_service_event
@@ -578,8 +578,8 @@ def test_log_service_event_success_as_service(mock_manager, mocker):
 
     # check_role is called with (sender, "SERVICE") first
     mocker.patch.object(mock_manager, "check_role", return_value=True)
-    mock_part_data = [None] * 8
-    mock_part_data[7] = True  # exists flag
+    mock_part_data = [None] * 7
+    mock_part_data[6] = True  # exists flag
     mock_manager.contract.functions.parts.return_value.call.return_value = mock_part_data
 
     mock_tx = MagicMock()
@@ -606,8 +606,8 @@ def test_log_service_event_success_as_operator(mock_manager, mocker):
     mock_check = mocker.patch.object(mock_manager, "check_role")
     mock_check.side_effect = [False, True]
 
-    mock_part_data = [None] * 8
-    mock_part_data[7] = True  # exists flag
+    mock_part_data = [None] * 7
+    mock_part_data[6] = True  # exists flag
     mock_manager.contract.functions.parts.return_value.call.return_value = mock_part_data
 
     mock_tx = MagicMock()
@@ -649,8 +649,8 @@ def test_log_service_event_part_not_found(mock_manager, mocker):
     mocker.patch.object(mock_manager, "check_role", return_value=True)
 
     # Simulate part does not exist
-    mock_part_data = [None] * 8
-    mock_part_data[7] = False  # exists flag
+    mock_part_data = [None] * 7
+    mock_part_data[6] = False  # exists flag
     mock_manager.contract.functions.parts.return_value.call.return_value = mock_part_data
 
     with pytest.raises(ValueError, match="Part with ID .* does not exist"):
@@ -667,9 +667,9 @@ def test_extend_warranty_success(mock_manager, mocker):
     additional_days = 30
 
     mocker.patch.object(mock_manager, "check_role", return_value=True)
-    mock_part_data = [None] * 8
+    mock_part_data = [None] * 7
     mock_part_data[1] = "0xOEMUser"
-    mock_part_data[7] = True  # exists flag
+    mock_part_data[6] = True  # exists flag
     mock_manager.contract.functions.parts.return_value.call.return_value = mock_part_data
 
     mock_tx = MagicMock()
@@ -701,9 +701,9 @@ def test_extend_warranty_oem_is_not_producer(mock_manager, mocker):
     sender_account.address = "0xAddressWithoutRole"
     part_id_hex = "0x" + "b" * 64
     mocker.patch.object(mock_manager, "check_role", return_value=True)
-    mock_part_data = [None] * 8
+    mock_part_data = [None] * 7
     mock_part_data[1] = "0xDifferentOEM"
-    mock_part_data[7] = True  # exists flag
+    mock_part_data[6] = True  # exists flag
 
     mock_manager.contract.functions.parts.return_value.call.return_value = mock_part_data
     with pytest.raises(PermissionError, match="is not the manufacturer of part"):
@@ -717,8 +717,8 @@ def test_extend_warranty_part_not_found(mock_manager, mocker):
     part_id_hex = "0x" + "c" * 64
 
     mocker.patch.object(mock_manager, "check_role", return_value=True)
-    mock_part_data = [None] * 8
-    mock_part_data[7] = False  # exists flag
+    mock_part_data = [None] * 7
+    mock_part_data[6] = False  # exists flag
 
     mock_manager.contract.functions.parts.return_value.call.return_value = mock_part_data
     with pytest.raises(ValueError, match="Part with ID .* does not exist"):
@@ -733,9 +733,9 @@ def test_extend_warranty_transaction_failed(mock_manager, mocker):
     additional_days = 30
 
     mocker.patch.object(mock_manager, "check_role", return_value=True)
-    mock_part_data = [None] * 8
+    mock_part_data = [None] * 7
     mock_part_data[1] = "0xOEMUser"
-    mock_part_data[7] = True  # exists flag
+    mock_part_data[6] = True  # exists flag
     mock_manager.contract.functions.parts.return_value.call.return_value = mock_part_data
 
     mocker.patch.object(mock_manager, "_send_transaction", side_effect=Exception("Transaction failed"))
@@ -869,9 +869,8 @@ def test_get_part_details_success(mock_manager, mocker):
         serial,  # 2: serialNumber
         1700000000,  # 3: manufactureDate (2023-11-14)
         1700000000 + 86400,  # 4: warrantyExpiryDate (2023-11-15)
-        "Vessel001",  # 5: vesselId
-        "QmCertHash",  # 6: certificateHash
-        True,  # 7: exists
+        "QmCertHash",  # 5: certificateHash
+        True,  # 6: exists
     ]
     mock_manager.contract.functions.parts.return_value.call.return_value = mock_part_data
 
@@ -879,7 +878,6 @@ def test_get_part_details_success(mock_manager, mocker):
     assert details is not None
     assert details["part_name"] == "Engine"
     assert details["serial_number"] == serial
-    assert details["vessel_id"] == "Vessel001"
     assert details["certificate_hash"] == "QmCertHash"
     assert isinstance(details["manufacture_date"], str)
     assert "2023" in details["manufacture_date"]
@@ -892,7 +890,7 @@ def test_get_part_details_not_found(mock_manager, mocker):
     """
     mocker.patch.object(mock_manager, "get_part_id", return_value="0x" + "b" * 64)
 
-    mock_data = ["", "", "", 0, 0, "", "", False]
+    mock_data = ["Engine", "0xaddr", "SN", 0, 0, "QmHash", False]
     mock_manager.contract.functions.parts.return_value.call.return_value = mock_data
 
     details = mock_manager.get_part_details("0xManuf", "SN999")

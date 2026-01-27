@@ -18,7 +18,7 @@ def test_service_event_logging_service(grant_role_for_tests, solo_accounts, cont
         deployed_contract_address,
         contract_details['abi'],
         "registerPart",
-        ["Generator", serial_number, 365*24*60*60, "VesselLOG001", "QmCertificateHash"],
+        ["Generator", serial_number, 365*24*60*60, "QmCertificateHash"],
         oem_pk
     )
     receipt = wait_for_receipt(tx_id, timeout=11)
@@ -65,7 +65,7 @@ def test_service_event_logging_operator(grant_role_for_tests, solo_accounts, con
         deployed_contract_address,
         contract_details['abi'],
         "registerPart",
-        ["Generator", serial_number, 365*24*60*60, "VesselLOG001", "QmCertificateHash"],
+        ["Generator", serial_number, 365*24*60*60, "QmCertificateHash"],
         oem_pk
     )
     receipt = wait_for_receipt(tx_id, timeout=11)
@@ -109,7 +109,7 @@ def test_service_event_logging_oem(grant_role_for_tests, solo_accounts, contract
         deployed_contract_address,
         contract_details['abi'],
         "registerPart",
-        ["Generator", serial_number, 365*24*60*60, "VesselLOG001", "QmCertificateHash"],
+        ["Generator", serial_number, 365*24*60*60, "QmCertificateHash"],
         oem_pk
     )
     receipt = wait_for_receipt(tx_id, timeout=11)
@@ -167,7 +167,7 @@ def test_service_event_logging_history(grant_role_for_tests, solo_accounts, cont
         deployed_contract_address,
         contract_details['abi'],
         "registerPart",
-        ["Auxiliary Engine", serial_number_1, 180 * 24 * 60 * 60, "Vessel002", "QmCertificateHash2"],
+        ["Auxiliary Engine", serial_number_1, 180 * 24 * 60 * 60, "QmCertificateHash2"],
         oem_pk
     )
 
@@ -176,7 +176,7 @@ def test_service_event_logging_history(grant_role_for_tests, solo_accounts, cont
         deployed_contract_address,
         contract_details['abi'],
         "registerPart",
-        ["Navigation System", serial_number_2, 90 * 24 * 60 * 60, "Vessel003", "QmCertificateHash3"],
+        ["Navigation System", serial_number_2, 90 * 24 * 60 * 60, "QmCertificateHash3"],
         oem_pk
     )
 
@@ -185,7 +185,7 @@ def test_service_event_logging_history(grant_role_for_tests, solo_accounts, cont
         deployed_contract_address,
         contract_details['abi'],
         "registerPart",
-        ["Radar System", serial_number_3, 120 * 24 * 60 * 60, "Vessel004", "QmCertificateHash4"],
+        ["Radar System", serial_number_3, 120 * 24 * 60 * 60, "QmCertificateHash4"],
         oem_pk
     )
 
@@ -237,7 +237,7 @@ def test_service_event_logging_chronological_order(grant_role_for_tests, solo_ac
         deployed_contract_address,
         contract_details['abi'],
         "registerPart",
-        ["Fuel Pump", serial_number, 200*24*60*60, "Vessel005", "QmCertificateHash5"],
+        ["Fuel Pump", serial_number, 200*24*60*60, "QmCertificateHash5"],
         oem_pk
     )
     receipt = wait_for_receipt(tx_id, timeout=11)

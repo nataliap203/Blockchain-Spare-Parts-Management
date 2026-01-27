@@ -14,7 +14,6 @@ def test_oem_registers_part(accounts, project):
         "Main Engine",
         serial_number,
         365 * 24 * 60 * 60,
-        "Vessel001",
         "QmCertificateHash",
         sender=oem
     )
@@ -40,7 +39,6 @@ def test_oem_registers_existing_part(accounts, project):
         "Main Engine",
         serial_number,
         365 * 24 * 60 * 60,
-        "Vessel001",
         "QmCertificateHash",
         sender=oem
     )
@@ -50,7 +48,6 @@ def test_oem_registers_existing_part(accounts, project):
             "Main Engine Duplicate",
             serial_number,
             365 * 24 * 60 * 60,
-            "Vessel002",
             "QmCertificateHash2",
             sender=oem
         )
@@ -71,7 +68,6 @@ def test_same_serial_different_oem(accounts, project):
         "Main Engine OEM1",
         serial_number,
         365 * 24 * 60 * 60,
-        "Vessel001",
         "QmCertificateHash1",
         sender=oem1
     )
@@ -81,7 +77,6 @@ def test_same_serial_different_oem(accounts, project):
         "Main Engine OEM2",
         serial_number,
         365 * 24 * 60 * 60,
-        "Vessel002",
         "QmCertificateHash2",
         sender=oem2
     )
@@ -99,7 +94,6 @@ def test_operator_registers_part(accounts, project):
             "Main Engine",
             serial_number,
             365 * 24 * 60 * 60,
-            "Vessel001",
             "QmCertificateHash",
             sender=operator
         )
@@ -119,7 +113,6 @@ def test_service_registers_part(accounts, project):
             "Main Engine",
             serial_number,
             365 * 24 * 60 * 60,
-            "Vessel001",
             "QmCertificateHash",
             sender=service
         )
@@ -138,7 +131,6 @@ def test_unauthorized_registers_part(accounts, project):
             "Main Engine",
             serial_number,
             365 * 24 * 60 * 60,
-            "Vessel001",
             "QmCertificateHash",
             sender=unauthorized
         )

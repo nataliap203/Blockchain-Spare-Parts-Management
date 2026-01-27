@@ -19,7 +19,7 @@ def test_warranty_check(grant_role_for_tests, solo_accounts, contract_details, d
         deployed_contract_address,
         contract_details["abi"],
         "registerPart",
-        ["Auxiliary Pump", serial_number, short_warranty_seconds, "Vessel002", "QmCertificateHash2"],
+        ["Auxiliary Pump", serial_number, short_warranty_seconds, "QmCertificateHash2"],
         oem_pk,
     )
     receipt = wait_for_receipt(tx_id, timeout=11)
@@ -51,7 +51,7 @@ def test_warranty_edge_case(grant_role_for_tests, solo_accounts, contract_detail
         deployed_contract_address,
         contract_details["abi"],
         "registerPart",
-        ["Edge Case Part", serial_number, edge_warranty, "Vessel003", "QmCertificateHash3"],
+        ["Edge Case Part", serial_number, edge_warranty, "QmCertificateHash3"],
         oem_pk,
     )
     receipt = wait_for_receipt(tx_id, timeout=11)
@@ -80,7 +80,7 @@ def test_extend_warranty_success(grant_role_for_tests, solo_accounts, contract_d
         deployed_contract_address,
         contract_details["abi"],
         "registerPart",
-        ["Extendable Part", serial_number, initial_warranty, "Vessel004", "QmCertificateHash4"],
+        ["Extendable Part", serial_number, initial_warranty, "QmCertificateHash4"],
         oem_pk,
     )
     receipt = wait_for_receipt(tx_id, timeout=11)
@@ -109,7 +109,7 @@ def test_extend_warranty_unauthorized(grant_role_for_tests, solo_accounts, contr
         deployed_contract_address,
         contract_details["abi"],
         "registerPart",
-        ["Unauthorized Extend Part", serial_number, initial_warranty, "Vessel005", "QmCertificateHash5"],
+        ["Unauthorized Extend Part", serial_number, initial_warranty, "QmCertificateHash5"],
         oem_pk,
     )
     receipt = wait_for_receipt(tx_id, timeout=11)
@@ -143,7 +143,7 @@ def test_extend_warranty_oem_is_not_producer(grant_role_for_tests, solo_accounts
         deployed_contract_address,
         contract_details["abi"],
         "registerPart",
-        ["OEM Not Producer Part", serial_number, initial_warranty, "Vessel006", "QmCertificateHash6"],
+        ["OEM Not Producer Part", serial_number, initial_warranty, "QmCertificateHash6"],
         oem_pk,
     )
     receipt = wait_for_receipt(tx_id, timeout=11)

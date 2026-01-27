@@ -10,7 +10,7 @@ def test_warranty_check(accounts, project):
     maritime.grantRole(maritime.ROLE_OEM(), oem.address, sender=operator)
 
     serial_number = "SN123456"
-    tx = maritime.registerPart("Main Engine", serial_number, 365 * 24 * 60 * 60, "Vessel001", "QmCertificateHash", sender=oem)
+    tx = maritime.registerPart("Main Engine", serial_number, 365 * 24 * 60 * 60, "QmCertificateHash", sender=oem)
 
     part_id = maritime.getPartId(oem.address, serial_number)
 
@@ -46,7 +46,7 @@ def test_warranty_edge_case(accounts, project):
     maritime.grantRole(maritime.ROLE_OEM(), oem.address, sender=operator)
 
     serial_number = "SNEDGE001"
-    tx = maritime.registerPart("Edge Case Part", serial_number, 1, "VesselEdge", "QmEdgeCertificateHash", sender=oem)
+    tx = maritime.registerPart("Edge Case Part", serial_number, 1, "QmEdgeCertificateHash", sender=oem)
 
     part_id = maritime.getPartId(oem.address, serial_number)
 
@@ -72,7 +72,7 @@ def test_extend_warranty(accounts, project):
     maritime.grantRole(maritime.ROLE_OEM(), oem.address, sender=operator)
 
     serial_number = "SNEXTEND001"
-    tx = maritime.registerPart("Extendable Part", serial_number, 10 * 24 * 60 * 60, "VesselExtend", "QmExtendCertificateHash", sender=oem)
+    tx = maritime.registerPart("Extendable Part", serial_number, 10 * 24 * 60 * 60, "QmExtendCertificateHash", sender=oem)
 
     part_id = maritime.getPartId(oem.address, serial_number)
 
@@ -102,7 +102,7 @@ def test_unauthorized_extend_warranty(accounts, project):
     maritime.grantRole(maritime.ROLE_OEM(), oem.address, sender=operator)
 
     serial_number = "SNUAUTH001"
-    tx = maritime.registerPart("Non-Extendable Part", serial_number, 5 * 24 * 60 * 60, "VesselNoExtend", "QmNoExtendCertificateHash", sender=oem)
+    tx = maritime.registerPart("Non-Extendable Part", serial_number, 5 * 24 * 60 * 60, "QmNoExtendCertificateHash", sender=oem)
 
     part_id = maritime.getPartId(oem.address, serial_number)
 
@@ -120,7 +120,7 @@ def test_extend_warranty_oem_not_producer(accounts, project):
     maritime.grantRole(maritime.ROLE_OEM(), another_oem.address, sender=operator)
 
     serial_number = "SNOEM002"
-    tx = maritime.registerPart("OEM Part", serial_number, 15 * 24 * 60 * 60, "VesselOEM", "QmOEMCertificateHash", sender=oem)
+    tx = maritime.registerPart("OEM Part", serial_number, 15 * 24 * 60 * 60, "QmOEMCertificateHash", sender=oem)
 
     part_id = maritime.getPartId(oem.address, serial_number)
 

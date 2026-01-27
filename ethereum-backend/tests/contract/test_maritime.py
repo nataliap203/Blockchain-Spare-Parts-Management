@@ -1,6 +1,7 @@
 import pytest
 from ape import reverts
 
+
 def test_full_scenario(accounts, project):
     operator = accounts[0]
     oem = accounts[1]
@@ -19,7 +20,7 @@ def test_full_scenario(accounts, project):
 
     serial_number = "SN123456"
 
-    tx = maritime.registerPart("Main Engine", serial_number, 365 * 24 * 60 * 60, "Vessel001", "QmCertificateHash", sender=oem)
+    tx = maritime.registerPart("Main Engine", serial_number, 365 * 24 * 60 * 60, "QmCertificateHash", sender=oem)
 
     part_id = maritime.getPartId(oem.address, serial_number)
     print(f"Part registered with ID: {part_id.hex()}")
@@ -38,12 +39,12 @@ def test_full_scenario(accounts, project):
 
     print("Testing security constraints...")
     with reverts("Access denied: no permission for this operation."):
-        maritime.registerPart("Fake Part", "SN000", 0, "", "", sender=unauthorized)
+        maritime.registerPart("Fake Part", "SN000", 0, "QmHash", sender=unauthorized)
 
     with reverts("Access denied: no permission to log service event."):
         maritime.logServiceEvent(part_id, "Unauthorized Service", "", sender=unauthorized)
 
     with reverts("Access denied: no permission for this operation."):
-        maritime.registerPart("Part by Service", "SN111", 0, "", "", sender=service)
+        maritime.registerPart("Part by Service", "SN111", 0, "QmHash", sender=service)
 
     print("All security constraints enforced correctly.")

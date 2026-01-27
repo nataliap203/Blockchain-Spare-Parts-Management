@@ -16,7 +16,7 @@ def test_oem_registers_part(grant_role_for_tests, solo_accounts, contract_detail
         deployed_contract_address,
         contract_details['abi'],
         "registerPart",
-        ["Main Engine", serial_number, 365*24*60*60, "Vessel001", "QmCertificateHash"],
+        ["Main Engine", serial_number, 365*24*60*60, "QmCertificateHash"],
         oem_pk
     )
 
@@ -39,7 +39,7 @@ def test_oem_registers_part(grant_role_for_tests, solo_accounts, contract_detail
         "parts",
         [part_id]
     )
-    assert saved_part[7] is True # exists
+    assert saved_part[6] is True # exists
     assert saved_part[1] == '0x' + oem_addr.hex() # manufacturer
     assert saved_part[2] == serial_number # serial number
 
@@ -53,7 +53,7 @@ def test_oem_registers_existing_part_fails(solo_accounts, contract_details, depl
         deployed_contract_address,
         contract_details['abi'],
         "registerPart",
-        ["Main Engine", serial_number, 365*24*60*60, "Vessel001", "QmCertificateHash"],
+        ["Main Engine", serial_number, 365*24*60*60, "QmCertificateHash"],
         oem_pk
     )
     with pytest.raises(Exception) as excinfo:
@@ -76,7 +76,7 @@ def test_same_serial_different_oem(grant_role_for_tests, solo_accounts, contract
         deployed_contract_address,
         contract_details['abi'],
         "registerPart",
-        ["Auxiliary Engine", serial_number, 365*24*60*60, "Vessel002", "QmCertHashOEM1"],
+        ["Auxiliary Engine", serial_number, 365*24*60*60, "QmCertHashOEM1"],
         oem1_pk
     )
     receipt1 = wait_for_receipt(tx1_id, timeout=11)
@@ -88,7 +88,7 @@ def test_same_serial_different_oem(grant_role_for_tests, solo_accounts, contract
         deployed_contract_address,
         contract_details['abi'],
         "registerPart",
-        ["Auxiliary Engine", serial_number, 365*24*60*60, "Vessel003", "QmCertHashOEM2"],
+        ["Auxiliary Engine", serial_number, 365*24*60*60, "QmCertHashOEM2"],
         oem2_pk
     )
     receipt2 = wait_for_receipt(tx2_id, timeout=11)
@@ -120,7 +120,7 @@ def test_service_registers_part_fails(grant_role_for_tests, solo_accounts, contr
         deployed_contract_address,
         contract_details['abi'],
         "registerPart",
-        ["Navigation System", serial_number, 180*24*60*60, "Vessel004", "QmCertHashService"],
+        ["Navigation System", serial_number, 180*24*60*60, "QmCertHashService"],
         service_pk
     )
 
@@ -137,7 +137,7 @@ def test_unauthorized_registers_part_fails(solo_accounts, contract_details, depl
         deployed_contract_address,
         contract_details['abi'],
         "registerPart",
-        ["Radar System", serial_number, 90*24*60*60, "Vessel005", "QmCertHashRandom"],
+        ["Radar System", serial_number, 90*24*60*60, "QmCertHashRandom"],
         random_pk
     )
 

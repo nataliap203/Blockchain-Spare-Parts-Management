@@ -8,7 +8,6 @@ class RegisterPartRequest(BaseModel):
     part_name: str
     serial_number: str
     warranty_days: int
-    vessel_id: str
     certificate_hash: str
 
 
@@ -44,7 +43,6 @@ class PartResponse(BaseModel):
     serial_number: str
     manufacture_date: Optional[str] = None
     warranty_expiry: Optional[str] = None
-    vessel_id: Optional[str] = None
     certificate_hash: Optional[str] = None
 
 
