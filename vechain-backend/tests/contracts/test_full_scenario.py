@@ -70,7 +70,7 @@ def test_full_scenario(solo_accounts, contract_details, deployed_contract_addres
         deployed_contract_address,
         contract_details['abi'],
         "registerPart",
-        ["Main Engine", serial_number, 365*24*60*60, "Vessel001", "QmCertHashPart"],
+        ["Main Engine", serial_number, 365*24*60*60, "QmCertHashPart"],
         oem_pk
     )
     recipt_part = wait_for_receipt(tx_part, timeout=11)
@@ -92,7 +92,7 @@ def test_full_scenario(solo_accounts, contract_details, deployed_contract_addres
         "parts",
         [part_id]
     )
-    assert saved_part[7] is True # exists
+    assert saved_part[6] is True # exists
     assert saved_part[1] == '0x' + oem_addr.hex() # manufacturer
     assert saved_part[2] == serial_number # serial number
 

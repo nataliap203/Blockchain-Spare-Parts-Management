@@ -244,8 +244,8 @@ def test_register_part_success(mock_maritime_manager, mocker):
     """Test successful part registration."""
     mocker.patch.object(mock_maritime_manager, "check_role", return_value=True)
     mocker.patch.object(mock_maritime_manager, "get_part_id", return_value="0x1234567890abcdef")
-    mock_part_data = [None] * 8
-    mock_part_data[7] = False  # exists flag
+    mock_part_data = [None] * 7
+    mock_part_data[6] = False  # exists flag
 
     mock_call = mocker.patch("src.app.maritime_manager.call_contract", return_value=mock_part_data)
 
@@ -257,7 +257,6 @@ def test_register_part_success(mock_maritime_manager, mocker):
         part_name="Engine",
         serial_number="SN123456",
         warranty_days=365,
-        vessel_id="Vessel001",
         certificate_hash="QmHash",
     )
     assert tx_id == "0xTxHash"
@@ -273,7 +272,6 @@ def test_register_part_no_role(mock_maritime_manager, mocker):
             part_name="Engine",
             serial_number="SN123456",
             warranty_days=365,
-            vessel_id="Vessel001",
             certificate_hash="QmHash",
         )
     assert "lacks OEM role" in str(exc_info.value)
@@ -283,8 +281,8 @@ def test_register_part_duplicate(mock_maritime_manager, mocker):
     """Test part registration failure due to duplicate part in the system."""
     mocker.patch.object(mock_maritime_manager, "check_role", return_value=True)
     mocker.patch.object(mock_maritime_manager, "get_part_id", return_value="0x1234567890abcdef")
-    mock_part_data = [None] * 8
-    mock_part_data[7] = True  # exists flag
+    mock_part_data = [None] * 7
+    mock_part_data[6] = True  # exists flag
 
     mocker.patch("src.app.maritime_manager.call_contract", return_value=mock_part_data)
 
@@ -294,7 +292,6 @@ def test_register_part_duplicate(mock_maritime_manager, mocker):
             part_name="Engine",
             serial_number="SN123456",
             warranty_days=365,
-            vessel_id="Vessel001",
             certificate_hash="QmHash",
         )
     assert "already registered" in str(exc_info.value)
@@ -304,8 +301,8 @@ def test_register_part_transaction_failed(mock_maritime_manager, mocker):
     """Test part registration failure due to transaction revert."""
     mocker.patch.object(mock_maritime_manager, "check_role", return_value=True)
     mocker.patch.object(mock_maritime_manager, "get_part_id", return_value="0x1234567890abcdef")
-    mock_part_data = [None] * 8
-    mock_part_data[7] = False  # exists flag
+    mock_part_data = [None] * 7
+    mock_part_data[6] = False  # exists flag
 
     mocker.patch("src.app.maritime_manager.call_contract", return_value=mock_part_data)
 
@@ -318,7 +315,6 @@ def test_register_part_transaction_failed(mock_maritime_manager, mocker):
             part_name="Engine",
             serial_number="SN123456",
             warranty_days=365,
-            vessel_id="Vessel001",
             certificate_hash="QmHash",
         )
     assert "Transaction to register part failed." in str(exc_info.value)
@@ -336,8 +332,8 @@ def test_log_service_event_success_as_service(mock_maritime_manager, mocker):
         return False
 
     mocker.patch.object(mock_maritime_manager, "check_role", side_effect=check_role_side_effect)
-    mock_part_data = [None] * 8
-    mock_part_data[7] = True  # exists flag
+    mock_part_data = [None] * 7
+    mock_part_data[6] = True  # exists flag
     mocker.patch("src.app.maritime_manager.call_contract", return_value=mock_part_data)
 
     mocker.patch("src.app.maritime_manager.send_transaction", return_value="0xTxService")
@@ -360,8 +356,8 @@ def test_log_service_event_success_as_operator(mock_maritime_manager, mocker):
         return False
 
     mocker.patch.object(mock_maritime_manager, "check_role", side_effect=check_role_side_effect)
-    mock_part_data = [None] * 8
-    mock_part_data[7] = True  # exists flag
+    mock_part_data = [None] * 7
+    mock_part_data[6] = True  # exists flag
     mocker.patch("src.app.maritime_manager.call_contract", return_value=mock_part_data)
 
     mocker.patch("src.app.maritime_manager.send_transaction", return_value="0xTxServiceOp")
@@ -387,8 +383,8 @@ def test_log_service_event_no_permission(mock_maritime_manager, mocker):
 def test_log_service_event_part_not_found(mock_maritime_manager, mocker):
     """Test service event logging failure due to part not found."""
     mocker.patch.object(mock_maritime_manager, "check_role", return_value=True)
-    mock_part_data = [None] * 8
-    mock_part_data[7] = False  # exists flag
+    mock_part_data = [None] * 7
+    mock_part_data[6] = False  # exists flag
     mocker.patch("src.app.maritime_manager.call_contract", return_value=mock_part_data)
 
     with pytest.raises(ValueError) as exc_info:
@@ -424,7 +420,6 @@ def test_extend_warranty_success(mock_maritime_manager, mocker):
         "SN123",
         1000,
         2000,
-        "Vessel1",
         "Hash",
         True,  # exists
     ]
@@ -465,9 +460,9 @@ def test_extend_warranty_oem_is_not_producer(mock_maritime_manager, mocker):
     sender_address = "0x" + "2" * 40
     mocker.patch("src.app.maritime_manager.private_key_to_address", return_value=sender_address)
     mocker.patch.object(mock_maritime_manager, "check_role", return_value=True)
-    mock_part_data = [None] * 8
+    mock_part_data = [None] * 7
     mock_part_data[1] = manufacturer_address
-    mock_part_data[7] = True  # exists flag
+    mock_part_data[6] = True  # exists flag
     mocker.patch("src.app.maritime_manager.call_contract", return_value=mock_part_data)
 
     with pytest.raises(PermissionError) as excinfo:
@@ -483,9 +478,9 @@ def test_extend_warranty_part_not_found(mock_maritime_manager, mocker):
     """Test warranty extension failure due to part not found."""
     manufacturer_address = "0x" + "1" * 40
     mocker.patch("src.app.maritime_manager.private_key_to_address", return_value=manufacturer_address)
-    mock_part_data = [None] * 8
+    mock_part_data = [None] * 7
     mock_part_data[1] = manufacturer_address
-    mock_part_data[7] = False  # exists flag
+    mock_part_data[6] = False  # exists flag
     mocker.patch("src.app.maritime_manager.call_contract", return_value=mock_part_data)
 
     with pytest.raises(ValueError) as excinfo:
@@ -501,8 +496,8 @@ def test_extend_warranty_transaction_failed(mock_maritime_manager, mocker):
     """Test warranty extension failure due to transaction revert."""
     mocker.patch("src.app.maritime_manager.private_key_to_address", return_value="0x" + "1" * 40)
     mocker.patch.object(mock_maritime_manager, "check_role", return_value=True)
-    mock_part_data = [None] * 8
-    mock_part_data[7] = True  # exists flag
+    mock_part_data = [None] * 7
+    mock_part_data[6] = True  # exists flag
     mocker.patch("src.app.maritime_manager.call_contract", return_value=mock_part_data)
 
     mocker.patch("src.app.maritime_manager.send_transaction", return_value="0xTxHash")
@@ -632,9 +627,8 @@ def test_get_part_details_success(mock_maritime_manager, mocker):
         "SN123456",  # 2: serialNumber
         1700000000,  # 3: manufactureDate (2023-11-14)
         1700000000 + 86400,  # 4: warrantyExpiryDate (2023-11-15)
-        "Vessel001",  # 5: vesselId
-        "QmCertHash",  # 6: certificateHash
-        True,  # 7: exists
+        "QmCertHash",  # 5: certificateHash
+        True,  # 6: exists
     ]
     mocker.patch("src.app.maritime_manager.call_contract", return_value=mock_contract_data)
 
@@ -643,7 +637,6 @@ def test_get_part_details_success(mock_maritime_manager, mocker):
     assert details["part_name"] == "Engine"
     assert details["serial_number"] == "SN123456"
     assert details["certificate_hash"] == "QmCertHash"
-
     assert isinstance(details["manufacture_date"], str)
     assert "2023" in details["manufacture_date"]
     assert details["manufacture_date"] != 1700000000
@@ -654,13 +647,12 @@ def test_get_part_details_not_found(mock_maritime_manager, mocker):
     mocker.patch.object(mock_maritime_manager, "get_part_id", return_value="0x" + "bb" * 32)
 
     mock_contract_data = [
-        "",
-        "",
-        "",
+        "Engine Part",
+        "0xOem",
+        "SN",
         0,
         0,
-        "",
-        "",
+        "QmHash",
         False,  # exists flag
     ]
     mocker.patch("src.app.maritime_manager.call_contract", return_value=mock_contract_data)

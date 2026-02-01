@@ -149,12 +149,11 @@ with tab1:
             part_name = st.text_input("Part Name", key="part_name")
             serial_number = st.text_input("Serial Number", key="serial_number")
             warranty_days = st.number_input("Warranty Period (days)", min_value=0, value=365, key="warranty_days")
-            vessel_id = st.text_input("Vessel ID", key="vessel_id")
             certificate_hash = st.text_input("Certificate Hash", key="certificate_hash")
 
             submitted = st.form_submit_button("Register Part")
         if submitted:
-            if not all([part_name, serial_number, vessel_id, certificate_hash]):
+            if not all([part_name, serial_number, certificate_hash]):
                 st.error("All fields are required.")
             else:
                 payload = {
@@ -162,7 +161,6 @@ with tab1:
                     "part_name": part_name,
                     "serial_number": serial_number,
                     "warranty_days": warranty_days,
-                    "vessel_id": vessel_id,
                     "certificate_hash": certificate_hash,
                 }
                 with st.spinner("Registering part..."):

@@ -257,7 +257,6 @@ def register_part(request: RegisterPartRequest, current_user: User = Depends(get
             part_name=request.part_name,
             serial_number=request.serial_number,
             warranty_days=request.warranty_days,
-            vessel_id=request.vessel_id,
             certificate_hash=request.certificate_hash,
         )
         part_id = manager.get_part_id(manufacturer_address=current_user.wallet_address, serial_number=request.serial_number)

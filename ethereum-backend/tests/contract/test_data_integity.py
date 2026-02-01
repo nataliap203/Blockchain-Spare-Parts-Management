@@ -11,7 +11,7 @@ def test_hash_function(accounts, project):
     maritime.grantRole(maritime.ROLE_OEM(), oem.address, sender=operator)
 
     serial_number = "SNTEST001"
-    tx = maritime.registerPart("Test Part", serial_number, 100 * 24 * 60 * 60, "VesselTest", "QmTestCertificateHash", sender=oem)
+    tx = maritime.registerPart("Test Part", serial_number, 100 * 24 * 60 * 60, "QmTestCertificateHash", sender=oem)
 
     part_id = maritime.getPartId(oem.address, serial_number)
 

@@ -241,16 +241,13 @@ class MaritimeManager:
 
     # === TRANSACTION METHODS ====
 
-    def register_part(
-        self, sender_account, part_name: str, serial_number: str, warranty_days: int, vessel_id: str, certificate_hash: str
-    ) -> str:
+    def register_part(self, sender_account, part_name: str, serial_number: str, warranty_days: int, certificate_hash: str) -> str:
         """Register a new part in the system.
         Args:
             sender_account (str, LocalAccount): The account registering the part.
             part_name (str): The name of the part.
             serial_number (str): The serial number of the part.
             warranty_days (int): Warranty duration in days.
-            vessel_id (str): Identifier of the vessel where the part is installed.
             certificate_hash (str): Hash of the part's certificate.
         Returns:
             str: Transaction hash of the part registration.
@@ -263,7 +260,7 @@ class MaritimeManager:
         part_id_hex = self.get_part_id(sender_address, serial_number)
         part_id_bytes = bytes.fromhex(part_id_hex[2:] if part_id_hex.startswith("0x") else part_id_hex)
         part_data = self.contract.functions.parts(part_id_bytes).call()
-        exists = part_data[7]
+        exists = part_data[6]
         if exists:  # exists flag
             raise ValueError(f"Part with serial number {serial_number} is already registered by this OEM.")
 
@@ -271,7 +268,6 @@ class MaritimeManager:
             part_name,
             serial_number,
             warranty_days * 24 * 60 * 60,
-            vessel_id,
             certificate_hash,
         )
         try:
@@ -298,7 +294,7 @@ class MaritimeManager:
 
         part_id_bytes = self._validate_part_id_format(part_id_hex)
         part_data = self.contract.functions.parts(part_id_bytes).call()
-        exists = part_data[7]
+        exists = part_data[6]
         if not exists:
             raise ValueError(f"Part with ID {part_id_hex} does not exist in the registry.")
 
@@ -332,7 +328,7 @@ class MaritimeManager:
         part_id_bytes = self._validate_part_id_format(part_id_hex)
         part_data = self.contract.functions.parts(part_id_bytes).call()
         manufacturer_address = part_data[1]
-        exists = part_data[7]
+        exists = part_data[6]
         if not exists:
             raise ValueError(f"Part with ID {part_id_hex} does not exist in the registry.")
         if manufacturer_address and manufacturer_address.lower() != sender_address.lower():
@@ -411,7 +407,7 @@ class MaritimeManager:
                 bytes.fromhex(part_id_hex[2:] if part_id_hex.startswith("0x") else part_id_hex)
             ).call()
 
-            if part_data[7] is False:  # exists flag
+            if part_data[6] is False:  # exists flag
                 return None
 
             return {
@@ -421,8 +417,7 @@ class MaritimeManager:
                 "serial_number": part_data[2],
                 "manufacture_date": self._format_date(part_data[3]),
                 "warranty_expiry": self._format_date(part_data[4]),
-                "vessel_id": part_data[5],
-                "certificate_hash": part_data[6],
+                "certificate_hash": part_data[5],
             }
         except ValueError as ve:
             raise ve

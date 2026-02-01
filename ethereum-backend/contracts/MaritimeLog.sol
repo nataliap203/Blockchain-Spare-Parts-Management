@@ -17,7 +17,6 @@ contract MaritimeLog {
         string serialNumber;
         uint256 manufactureDate;
         uint256 warrantyExpiryDate;
-        string vesselId;
         string certificateHash;
         bool exists;
     }
@@ -96,7 +95,6 @@ contract MaritimeLog {
         string memory _partName,
         string memory _serialNumber,
         uint256 _warrantySeconds,
-        string memory _vesselId,
         string memory _certificateHash
     ) public onlyRole(ROLE_OEM) returns (bytes32) {
         // part ID is hash of manufacturer address + serial number
@@ -109,7 +107,6 @@ contract MaritimeLog {
             serialNumber: _serialNumber,
             manufactureDate: block.timestamp,
             warrantyExpiryDate: block.timestamp + _warrantySeconds,
-            vesselId: _vesselId,
             certificateHash: _certificateHash,
             exists: true
         });

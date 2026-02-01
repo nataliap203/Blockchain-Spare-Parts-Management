@@ -1,6 +1,7 @@
 import pytest
 from ape import reverts
 
+
 def test_service_event_logging_service(accounts, project):
     operator = accounts[0]
     oem = accounts[1]
@@ -13,7 +14,7 @@ def test_service_event_logging_service(accounts, project):
 
     serial_number = "SN654321"
 
-    tx = maritime.registerPart("Auxiliary Engine", serial_number, 180 * 24 * 60 * 60, "Vessel002", "QmCertificateHash2", sender=oem)
+    tx = maritime.registerPart("Auxiliary Engine", serial_number, 180 * 24 * 60 * 60, "QmCertificateHash2", sender=oem)
 
     part_id = maritime.getPartId(oem.address, serial_number)
 
@@ -25,6 +26,7 @@ def test_service_event_logging_service(accounts, project):
     assert history[0].serviceProvider == service.address
     print("Service event logging by service test passed successfully.")
 
+
 def test_service_event_logging_operator(accounts, project):
     operator = accounts[0]
     oem = accounts[1]
@@ -34,7 +36,7 @@ def test_service_event_logging_operator(accounts, project):
 
     serial_number = "SN654321"
 
-    tx = maritime.registerPart("Auxiliary Engine", serial_number, 180 * 24 * 60 * 60, "Vessel002", "QmCertificateHash2", sender=oem)
+    tx = maritime.registerPart("Auxiliary Engine", serial_number, 180 * 24 * 60 * 60, "QmCertificateHash2", sender=oem)
 
     part_id = maritime.getPartId(oem.address, serial_number)
 
@@ -56,13 +58,14 @@ def test_service_event_logging_oem(accounts, project):
 
     serial_number = "SN654321"
 
-    tx = maritime.registerPart("Auxiliary Engine", serial_number, 180 * 24 * 60 * 60, "Vessel002", "QmCertificateHash2", sender=oem)
+    tx = maritime.registerPart("Auxiliary Engine", serial_number, 180 * 24 * 60 * 60, "QmCertificateHash2", sender=oem)
 
     part_id = maritime.getPartId(oem.address, serial_number)
 
     with reverts("Access denied: no permission to log service event."):
         maritime.logServiceEvent(part_id, "Engine Overhaul", "QmServiceProtocolHash2", sender=oem)
     print("OEM cannot log service event test passed successfully.")
+
 
 def test_service_event_logging_for_not_existing_part(accounts, project):
     operator = accounts[0]
@@ -71,11 +74,12 @@ def test_service_event_logging_for_not_existing_part(accounts, project):
     maritime = operator.deploy(project.MaritimeLog)
     maritime.grantRole(maritime.ROLE_SERVICE(), service.address, sender=operator)
 
-    fake_part_id = b'\x00' * 32
+    fake_part_id = b"\x00" * 32
 
     with reverts("Part does not exist."):
         maritime.logServiceEvent(fake_part_id, "Non-existent Part Service", "QmFakeHash", sender=service)
     print("Logging service event for non-existing part test passed successfully.")
+
 
 def test_service_event_logging_history(accounts, project):
     operator = accounts[0]
@@ -88,14 +92,14 @@ def test_service_event_logging_history(accounts, project):
     maritime.grantRole(maritime.ROLE_SERVICE(), service.address, sender=operator)
 
     serial_number1 = "SN654321"
-    tx1 = maritime.registerPart("Auxiliary Engine", serial_number1, 180 * 24 * 60 * 60, "Vessel002", "QmCertificateHash2", sender=oem)
+    tx1 = maritime.registerPart("Auxiliary Engine", serial_number1, 180 * 24 * 60 * 60, "QmCertificateHash2", sender=oem)
 
     serial_number2 = "SN789012"
 
-    tx2 = maritime.registerPart("Navigation System", serial_number2, 90 * 24 * 60 * 60, "Vessel003", "QmCertificateHash3", sender=oem)
+    tx2 = maritime.registerPart("Navigation System", serial_number2, 90 * 24 * 60 * 60, "QmCertificateHash3", sender=oem)
 
     serial_number3 = "SN345678"
-    tx3 = maritime.registerPart("Radar System", serial_number3, 120 * 24 * 60 * 60, "Vessel004", "QmCertificateHash4", sender=oem)
+    tx3 = maritime.registerPart("Radar System", serial_number3, 120 * 24 * 60 * 60, "QmCertificateHash4", sender=oem)
 
     part_id1 = maritime.getPartId(oem.address, serial_number1)
     part_id2 = maritime.getPartId(oem.address, serial_number2)
@@ -116,6 +120,7 @@ def test_service_event_logging_history(accounts, project):
     assert history3[0].serviceType == "Hardware Calibration"
     print("Service event logging history test passed successfully.")
 
+
 def test_service_event_logging_chronological_order(accounts, project):
     operator = accounts[0]
     oem = accounts[1]
@@ -127,7 +132,7 @@ def test_service_event_logging_chronological_order(accounts, project):
     maritime.grantRole(maritime.ROLE_SERVICE(), service.address, sender=operator)
 
     serial_number = "SN654321"
-    tx = maritime.registerPart("Auxiliary Engine", serial_number, 180 * 24 * 60 * 60, "Vessel002", "QmCertificateHash2", sender=oem)
+    tx = maritime.registerPart("Auxiliary Engine", serial_number, 180 * 24 * 60 * 60, "QmCertificateHash2", sender=oem)
 
     part_id = maritime.getPartId(oem.address, serial_number)
 
@@ -141,5 +146,3 @@ def test_service_event_logging_chronological_order(accounts, project):
     assert history[1].serviceType == "Second Service"
     assert history[2].serviceType == "Third Service"
     print("Service event logging chronological order test passed successfully.")
-
-
